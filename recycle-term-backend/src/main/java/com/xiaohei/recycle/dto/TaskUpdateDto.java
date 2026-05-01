@@ -6,5 +6,6 @@ import lombok.Data;
 public class TaskUpdateDto {
     private Boolean needVisit;
     private Boolean completed;
+    private String status;
     private String remark;
 }

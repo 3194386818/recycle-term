@@ -40,9 +40,14 @@ public class RecycleTaskService {
             }
             if (StringUtils.hasText(status)) {
                 if ("待回收".equals(status)) {
+                    predicates.add(cb.and(
+                        cb.or(cb.equal(root.get("status"), status), cb.isNull(root.get("status"))),
+                        cb.or(cb.equal(root.get("completed"), false), cb.isNull(root.get("completed")))
+                    ));
+                } else if ("已完成".equals(status)) {
                     predicates.add(cb.or(
                         cb.equal(root.get("status"), status),
-                        cb.isNull(root.get("status"))
+                        cb.and(cb.equal(root.get("completed"), true), cb.isNull(root.get("status")))
                     ));
                 } else {
                     predicates.add(cb.equal(root.get("status"), status));
@@ -74,6 +79,13 @@ public class RecycleTaskService {
             task.setCompleted(dto.getCompleted());
             task.setCompletedAt(dto.getCompleted() ? LocalDateTime.now() : null);
         }
+        if (dto.getStatus() != null) {
+            task.setStatus(dto.getStatus());
+            if ("已完成".equals(dto.getStatus())) {
+                task.setCompleted(true);
+                task.setCompletedAt(LocalDateTime.now());
+            }
+        }
         if (dto.getRemark() != null) {
             task.setRemark(dto.getRemark());
         }
@@ -82,10 +94,18 @@ public class RecycleTaskService {
 
     public StatsDto getStats() {
         long total = taskRepository.count();
-        long completed = taskRepository.count((root, query, cb) -> cb.equal(root.get("status"), "已完成"));
-        long pending = taskRepository.count((root, query, cb) -> cb.or(
-            cb.equal(root.get("status"), "待回收"),
-            cb.isNull(root.get("status"))
+        // 已完成: status='已完成' OR (completed=true AND status IS NULL)
+        long completed = taskRepository.count((root, query, cb) -> cb.or(
+            cb.equal(root.get("status"), "已完成"),
+            cb.and(cb.equal(root.get("completed"), true), cb.isNull(root.get("status")))
+        ));
+        // 待回收: (status='待回收' OR status IS NULL) AND completed=false
+        long pending = taskRepository.count((root, query, cb) -> cb.and(
+            cb.or(
+                cb.equal(root.get("status"), "待回收"),
+                cb.isNull(root.get("status"))
+            ),
+            cb.or(cb.equal(root.get("completed"), false), cb.isNull(root.get("completed")))
         ));
         long needVisit = taskRepository.count((root, query, cb) -> cb.equal(root.get("needVisit"), true));
         long failed = taskRepository.count((root, query, cb) -> cb.equal(root.get("status"), "已失败"));
