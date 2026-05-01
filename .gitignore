@@ -1,0 +1,29 @@
+# IDE
+.idea/
+.vscode/
+*.iml
+.classpath
+.factorypath
+.project
+.settings/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Backend (Java/Maven)
+recycle-term-backend/target/
+*.class
+*.jar
+*.war
+
+# Frontend (Node)
+recycle-term-frontend/node_modules/
+recycle-term-frontend/dist/
+
+# Logs
+*.log
+
+# Env
+.env
+.env.local

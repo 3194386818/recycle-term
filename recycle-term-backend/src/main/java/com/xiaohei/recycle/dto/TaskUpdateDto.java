@@ -1,0 +1,10 @@
+package com.xiaohei.recycle.dto;
+
+import lombok.Data;
+
+@Data
+public class TaskUpdateDto {
+    private Boolean needVisit;
+    private Boolean completed;
+    private String remark;
+}
