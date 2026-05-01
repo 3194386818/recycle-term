@@ -61,6 +61,9 @@ public class RecycleTask {
     @Column(name = "need_visit")
     private Boolean needVisit = false;
 
+    @Column(name = "status", length = 20)
+    private String status = "待回收";
+
     @Column(name = "completed")
     private Boolean completed = false;
 

@@ -1,0 +1,66 @@
+import axios from 'axios'
+import type { RecycleTask, ApiResult, PageResult, OperationLog } from '../types'
+
+const adminApi = axios.create({
+  baseURL: '/api/admin',
+  timeout: 10000,
+})
+
+adminApi.interceptors.request.use((config) => {
+  const token = localStorage.getItem('admin_token')
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+})
+
+adminApi.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    if (err.response?.status === 401) {
+      localStorage.removeItem('admin_token')
+      window.location.hash = '#/admin/login'
+    }
+    return Promise.reject(err)
+  }
+)
+
+export function adminLogin(username: string, password: string) {
+  return adminApi.post<ApiResult<{ token: string; username: string }>>('/login', { username, password })
+}
+
+export function getAdminTasks(params: { keyword?: string; page?: number; size?: number }) {
+  return adminApi.get<ApiResult<PageResult<RecycleTask>>>('/tasks', { params })
+}
+
+export function createTask(data: Partial<RecycleTask>) {
+  return adminApi.post<ApiResult<RecycleTask>>('/tasks', data)
+}
+
+export function batchCreateTasks(data: Partial<RecycleTask>[]) {
+  return adminApi.post<ApiResult<RecycleTask[]>>('/tasks/batch', data)
+}
+
+export function updateAdminTask(id: number, data: Partial<RecycleTask>) {
+  return adminApi.put<ApiResult<RecycleTask>>(`/tasks/${id}`, data)
+}
+
+export function deleteAdminTask(id: number) {
+  return adminApi.delete<ApiResult<void>>(`/tasks/${id}`)
+}
+
+export function getDailyStats(days?: number) {
+  return adminApi.get<ApiResult<Array<{ date: string; completed: number; scanned: number }>>>('/stats/daily', { params: { days } })
+}
+
+export function getStatusStats() {
+  return adminApi.get<ApiResult<Record<string, number>>>('/stats/status')
+}
+
+export function getAreaStats() {
+  return adminApi.get<ApiResult<Array<{ area: string; count: number }>>>('/stats/area')
+}
+
+export function getLogs(params: { page?: number; size?: number }) {
+  return adminApi.get<ApiResult<PageResult<OperationLog>>>('/logs', { params })
+}

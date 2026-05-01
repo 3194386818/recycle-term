@@ -16,6 +16,30 @@ const routes = [
     name: 'ScanPage',
     component: () => import('../views/ScanPage.vue'),
   },
+  {
+    path: '/admin/login',
+    name: 'AdminLogin',
+    component: () => import('../views/admin/AdminLogin.vue'),
+  },
+  {
+    path: '/admin',
+    component: () => import('../views/admin/AdminLayout.vue'),
+    beforeEnter: (_to: any, _from: any, next: any) => {
+      const token = localStorage.getItem('admin_token')
+      if (!token) {
+        next('/admin/login')
+      } else {
+        next()
+      }
+    },
+    children: [
+      { path: '', redirect: '/admin/dashboard' },
+      { path: 'dashboard', name: 'Dashboard', component: () => import('../views/admin/Dashboard.vue') },
+      { path: 'tasks', name: 'TaskManage', component: () => import('../views/admin/TaskManage.vue') },
+      { path: 'batch', name: 'BatchImport', component: () => import('../views/admin/BatchImport.vue') },
+      { path: 'logs', name: 'OperationLogs', component: () => import('../views/admin/OperationLogs.vue') },
+    ],
+  },
 ]
 
 const router = createRouter({

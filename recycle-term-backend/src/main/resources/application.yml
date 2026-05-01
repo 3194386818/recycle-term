@@ -24,3 +24,7 @@ logging:
   level:
     com.xiaohei: debug
     org.hibernate.SQL: debug
+
+jwt:
+  secret: recycle-term-jwt-secret-key-2026-must-be-32bytes
+  expiration: 86400000

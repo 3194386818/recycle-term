@@ -25,7 +25,7 @@ public class RecycleTaskService {
     private final RecycleTaskRepository taskRepository;
     private final TerminalRecordRepository recordRepository;
 
-    public Page<RecycleTask> search(String keyword, Boolean completed, Boolean needVisit, Pageable pageable) {
+    public Page<RecycleTask> search(String keyword, Boolean completed, Boolean needVisit, String status, Pageable pageable) {
         Specification<RecycleTask> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
             if (StringUtils.hasText(keyword)) {
@@ -34,14 +34,19 @@ public class RecycleTaskService {
                     cb.like(root.get("phoneNumber"), like),
                     cb.like(root.get("userName"), like),
                     cb.like(root.get("userAddress"), like),
-                    cb.like(root.get("terminals"), like)
+                    cb.like(root.get("terminals"), like),
+                    cb.like(root.get("detailDesc"), like)
                 ));
             }
-            if (completed != null) {
-                predicates.add(cb.equal(root.get("completed"), completed));
-            }
-            if (needVisit != null) {
-                predicates.add(cb.equal(root.get("needVisit"), needVisit));
+            if (StringUtils.hasText(status)) {
+                predicates.add(cb.equal(root.get("status"), status));
+            } else {
+                if (completed != null) {
+                    predicates.add(cb.equal(root.get("completed"), completed));
+                }
+                if (needVisit != null) {
+                    predicates.add(cb.equal(root.get("needVisit"), needVisit));
+                }
             }
             return cb.and(predicates.toArray(new Predicate[0]));
         };

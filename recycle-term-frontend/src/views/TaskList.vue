@@ -1,110 +1,58 @@
 <template>
   <div class="task-list">
-    <!-- Stats -->
+    <!-- Stats cards: clickable filters -->
     <el-row :gutter="12" class="stats-row">
-      <el-col :xs="12" :sm="6">
-        <el-card shadow="hover" class="stat-card">
-          <div class="stat-num">{{ stats.total }}</div>
-          <div class="stat-label">总任务</div>
-        </el-card>
-      </el-col>
-      <el-col :xs="12" :sm="6">
-        <el-card shadow="hover" class="stat-card done">
-          <div class="stat-num">{{ stats.completed }}</div>
-          <div class="stat-label">已完成</div>
-        </el-card>
-      </el-col>
-      <el-col :xs="12" :sm="6">
-        <el-card shadow="hover" class="stat-card pending">
-          <div class="stat-num">{{ stats.pending }}</div>
-          <div class="stat-label">待回收</div>
-        </el-card>
-      </el-col>
-      <el-col :xs="12" :sm="6">
-        <el-card shadow="hover" class="stat-card visit">
-          <div class="stat-num">{{ stats.needVisit }}</div>
-          <div class="stat-label">需上门</div>
+      <el-col :xs="12" :sm="6" v-for="item in statCards" :key="item.key">
+        <el-card shadow="hover" class="stat-card" :class="{ active: activeFilter === item.key }" @click="setFilter(item.key)">
+          <div class="stat-num">{{ item.value }}</div>
+          <div class="stat-label">{{ item.label }}</div>
         </el-card>
       </el-col>
     </el-row>
 
-    <!-- Toolbar -->
+    <!-- Toolbar: search only -->
     <el-card shadow="never" class="toolbar-card">
-      <el-row :gutter="12">
-        <el-col :xs="24" :sm="8">
-          <el-input v-model="keyword" placeholder="搜索号码、姓名、地址..." clearable @input="debouncedFetch">
-            <template #prefix><el-icon><Search /></el-icon></template>
-          </el-input>
-        </el-col>
-        <el-col :xs="12" :sm="4" class="filter-col">
-          <el-select v-model="filterCompleted" placeholder="完成状态" clearable @change="fetchTasks">
-            <el-option label="待回收" :value="false" />
-            <el-option label="已完成" :value="true" />
-          </el-select>
-        </el-col>
-        <el-col :xs="12" :sm="4" class="filter-col">
-          <el-select v-model="filterVisit" placeholder="上门状态" clearable @change="fetchTasks">
-            <el-option label="需上门" :value="true" />
-            <el-option label="无需上门" :value="false" />
-          </el-select>
-        </el-col>
-        <el-col :xs="24" :sm="8" class="toolbar-btns">
-          <el-button type="primary" @click="$router.push('/scan/0')">
-            <el-icon><Camera /></el-icon><span class="btn-text">扫码查询</span>
-          </el-button>
-          <el-upload
-            :show-file-list="false"
-            :before-upload="handleImport"
-            accept=".xlsx,.xls"
-          >
-            <el-button type="success">
-              <el-icon><Upload /></el-icon><span class="btn-text">导入Excel</span>
-            </el-button>
-          </el-upload>
-        </el-col>
-      </el-row>
+      <el-input v-model="keyword" placeholder="搜索产品号、号码、姓名、地址..." clearable @input="debouncedFetch">
+        <template #prefix><el-icon><Search /></el-icon></template>
+      </el-input>
     </el-card>
 
     <!-- Table -->
     <el-card shadow="never">
       <el-table :data="tasks" v-loading="loading" stripe @row-click="goDetail" style="cursor:pointer">
+        <el-table-column label="产品号" prop="detailDesc" min-width="140" show-overflow-tooltip />
         <el-table-column label="用户名称" prop="userName" min-width="90" />
-        <el-table-column label="用户号码" prop="phoneNumber" min-width="120" class-name="hide-mobile" header-class-name="hide-mobile" />
-        <el-table-column label="地址" prop="userAddress" show-overflow-tooltip min-width="160" class-name="hide-mobile" header-class-name="hide-mobile" />
+        <el-table-column label="用户电话" prop="phoneNumber" min-width="120" class-name="hide-mobile" header-class-name="hide-mobile" />
+        <el-table-column label="用户地址" prop="userAddress" show-overflow-tooltip min-width="160" class-name="hide-mobile" header-class-name="hide-mobile" />
+        <el-table-column label="接入间" prop="accessRoom" width="100" show-overflow-tooltip class-name="hide-mobile" header-class-name="hide-mobile" />
         <el-table-column label="应回收" width="70" align="center">
+          <template #default="{ row }">{{ row.expectedCount || '-' }}</template>
+        </el-table-column>
+        <el-table-column label="已回收" width="70" align="center" class-name="hide-mobile" header-class-name="hide-mobile">
+          <template #default="{ row }">{{ row.fttrCount || '-' }}</template>
+        </el-table-column>
+        <el-table-column label="状态" width="90" align="center">
           <template #default="{ row }">
-            {{ row.expectedCount || '-' }}
+            <el-tag :type="statusType(row.status)" size="small">{{ row.status || '待回收' }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="FTTR" width="60" align="center" class-name="hide-mobile" header-class-name="hide-mobile">
+        <el-table-column label="操作" :width="isMobile ? 140 : 260" fixed="right">
           <template #default="{ row }">
-            {{ row.fttrCount || '-' }}
-          </template>
-        </el-table-column>
-        <el-table-column label="状态" width="80" align="center">
-          <template #default="{ row }">
-            <el-tag :type="row.completed ? 'success' : 'warning'" size="small">
-              {{ row.completed ? '已完成' : '待回收' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="上门" width="60" align="center" class-name="hide-mobile" header-class-name="hide-mobile">
-          <template #default="{ row }">
-            <el-tag v-if="row.needVisit" type="primary" size="small">是</el-tag>
-            <span v-else>否</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="操作" :width="isMobile ? 120 : 200" fixed="right">
-          <template #default="{ row }">
+            <el-button size="small" @click.stop="copyProduct(row.detailDesc)">复制产品号</el-button>
             <el-button size="small" type="primary" @click.stop="$router.push(`/scan/${row.id}`)">
               <el-icon><Camera /></el-icon><span class="btn-text">扫码</span>
             </el-button>
-            <el-button size="small" :type="row.completed ? 'info' : 'success'" @click.stop="toggleComplete(row)">
-              {{ row.completed ? '撤销' : '完成' }}
-            </el-button>
-            <el-button size="small" :type="row.needVisit ? 'info' : 'warning'" class="btn-text" @click.stop="toggleVisit(row)">
-              {{ row.needVisit ? '取消上门' : '上门' }}
-            </el-button>
+            <el-dropdown trigger="click" @command="(cmd: string) => handleStatusChange(row, cmd)" @click.stop>
+              <el-button size="small" type="success">状态</el-button>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="待回收">待回收</el-dropdown-item>
+                  <el-dropdown-item command="已上门">已上门</el-dropdown-item>
+                  <el-dropdown-item command="已完成">已完成</el-dropdown-item>
+                  <el-dropdown-item command="已失败">已失败</el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
           </template>
         </el-table-column>
       </el-table>
@@ -127,7 +75,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { getTasks, getStats, updateTask, importExcel } from '../api'
+import { getTasks, getStats, updateTask } from '../api'
 import type { RecycleTask, Stats } from '../types'
 
 const router = useRouter()
@@ -141,9 +89,16 @@ const page = ref(0)
 const size = ref(50)
 const total = ref(0)
 const keyword = ref('')
-const filterCompleted = ref<boolean | null>(null)
-const filterVisit = ref<boolean | null>(null)
+const activeFilter = ref('待回收')
+
 const stats = ref<Stats>({ total: 0, completed: 0, pending: 0, needVisit: 0, totalScanned: 0 })
+
+const statCards = ref([
+  { key: '全部', label: '总任务', value: 0 },
+  { key: '待回收', label: '待回收', value: 0 },
+  { key: '已完成', label: '已完成', value: 0 },
+  { key: '已上门', label: '已上门', value: 0 },
+])
 
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
 function debouncedFetch() {
@@ -151,16 +106,25 @@ function debouncedFetch() {
   debounceTimer = setTimeout(() => { page.value = 0; fetchTasks() }, 300)
 }
 
+function setFilter(key: string) {
+  activeFilter.value = key
+  page.value = 0
+  keyword.value = ''
+  fetchTasks()
+}
+
 async function fetchTasks() {
   loading.value = true
   try {
-    const { data: res } = await getTasks({
+    const params: any = {
       keyword: keyword.value,
-      completed: filterCompleted.value,
-      needVisit: filterVisit.value,
       page: page.value,
       size: size.value,
-    })
+    }
+    if (activeFilter.value !== '全部') {
+      params.status = activeFilter.value
+    }
+    const { data: res } = await getTasks(params)
     tasks.value = res.data.content
     total.value = res.data.totalElements
   } finally {
@@ -171,28 +135,43 @@ async function fetchTasks() {
 async function fetchStats() {
   const { data: res } = await getStats()
   stats.value = res.data
+  statCards.value[0].value = res.data.total
+  statCards.value[1].value = res.data.pending
+  statCards.value[2].value = res.data.completed
+  statCards.value[3].value = res.data.needVisit
 }
 
-async function toggleComplete(row: RecycleTask) {
-  await updateTask(row.id, { completed: !row.completed })
-  ElMessage.success(row.completed ? '已撤销' : '已完成')
+async function handleStatusChange(row: RecycleTask, status: string) {
+  const data: any = { status }
+  if (status === '已完成') {
+    data.completed = true
+  }
+  await updateTask(row.id, data)
+  ElMessage.success(`已更新为 ${status}`)
   fetchTasks()
   fetchStats()
 }
 
-async function toggleVisit(row: RecycleTask) {
-  await updateTask(row.id, { needVisit: !row.needVisit })
-  ElMessage.success(row.needVisit ? '已取消上门' : '已标记上门')
-  fetchTasks()
-  fetchStats()
+function copyProduct(text: string) {
+  if (!text) {
+    ElMessage.warning('产品号为空')
+    return
+  }
+  navigator.clipboard.writeText(text).then(() => {
+    ElMessage.success('已复制: ' + text)
+  }).catch(() => {
+    ElMessage.error('复制失败')
+  })
 }
 
-async function handleImport(file: File) {
-  const { data: res } = await importExcel(file)
-  ElMessage.success(res.message)
-  fetchTasks()
-  fetchStats()
-  return false // prevent default upload
+function statusType(status: string) {
+  const map: Record<string, string> = {
+    '待回收': 'warning',
+    '已上门': 'primary',
+    '已完成': 'success',
+    '已失败': 'danger',
+  }
+  return map[status] || 'info'
 }
 
 function goDetail(row: RecycleTask) {
@@ -208,27 +187,18 @@ onMounted(() => {
 <style scoped>
 .stats-row { margin-bottom: 12px; }
 .stats-row .el-col { margin-bottom: 8px; }
-.stat-card { text-align: center; border-radius: 12px; }
-.stat-card.done :deep(.el-card__body) { color: #52c41a; }
-.stat-card.pending :deep(.el-card__body) { color: #faad14; }
-.stat-card.visit :deep(.el-card__body) { color: #1677ff; }
+.stat-card { text-align: center; border-radius: 12px; cursor: pointer; transition: all .2s; }
+.stat-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,.12); }
+.stat-card.active { border: 2px solid #1677ff; }
 .stat-num { font-size: 32px; font-weight: 700; }
 .stat-label { font-size: 13px; color: #666; margin-top: 4px; }
 .toolbar-card { margin-bottom: 12px; }
-.toolbar-btns { display: flex; gap: 8px; justify-content: flex-end; }
-.filter-col { margin-top: 8px; }
 .pagination { margin-top: 12px; display: flex; justify-content: flex-end; }
 
 @media (max-width: 768px) {
   .stat-num { font-size: 24px; }
   .stat-label { font-size: 12px; }
-  .toolbar-btns {
-    margin-top: 8px;
-    justify-content: flex-start;
-  }
   .btn-text { display: none; }
-  :deep(.hide-mobile) {
-    display: none !important;
-  }
+  :deep(.hide-mobile) { display: none !important; }
 }
 </style>

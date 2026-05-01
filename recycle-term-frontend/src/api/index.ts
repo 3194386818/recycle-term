@@ -15,6 +15,7 @@ export function getTasks(params: {
   keyword?: string
   completed?: boolean | null
   needVisit?: boolean | null
+  status?: string
   page?: number
   size?: number
 }) {

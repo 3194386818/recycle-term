@@ -15,6 +15,7 @@ export interface RecycleTask {
   devDept: string
   devPerson: string
   needVisit: boolean
+  status: string
   completed: boolean
   completedAt: string | null
   remark: string
@@ -49,4 +50,14 @@ export interface ApiResult<T> {
   code: number
   message: string
   data: T
+}
+
+export interface OperationLog {
+  id: number
+  adminId: number
+  adminUsername: string
+  action: string
+  detail: string
+  ip: string
+  createdAt: string
 }
