@@ -1,8 +1,12 @@
 import axios from 'axios'
 import type { RecycleTask, TerminalRecord, Stats, PageResult, ApiResult } from '../types'
 
+const baseURL = import.meta.env.VITE_API_BASE_URL
+  ? import.meta.env.VITE_API_BASE_URL + '/api'
+  : '/api'
+
 const api = axios.create({
-  baseURL: '/api',
+  baseURL,
   timeout: 10000,
 })
 

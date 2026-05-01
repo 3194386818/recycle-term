@@ -37,7 +37,12 @@
 
       <!-- Camera -->
       <el-card shadow="never" class="scanner-card">
-        <div id="reader"></div>
+        <div class="scanner-viewport">
+          <video ref="videoRef" class="scanner-video" autoplay playsinline muted></video>
+          <div v-if="cameraError" class="camera-error">{{ cameraError }}</div>
+          <div v-if="scanning" class="scan-indicator">扫描中...</div>
+        </div>
+        <canvas ref="canvasRef" class="scanner-canvas"></canvas>
         <div class="manual-row">
           <el-input v-model="manualSn" placeholder="手动输入终端串码" @keydown.enter="addManual" clearable>
             <template #append>
@@ -82,10 +87,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Html5Qrcode } from 'html5-qrcode'
+import { readBarcodesFromImageData, getZXingModule, type ReaderOptions } from 'zxing-wasm/reader'
 import { getTaskById, getTasks, scanTerminals } from '../api'
 import type { RecycleTask } from '../types'
 
@@ -98,11 +103,23 @@ const scannedSNs = ref<string[]>([])
 const manualSn = ref('')
 const searchKeyword = ref('')
 const taskList = ref<RecycleTask[]>([])
+const cameraError = ref('')
+const scanning = ref(false)
 
-let scanner: Html5Qrcode | null = null
+const videoRef = ref<HTMLVideoElement | null>(null)
+const canvasRef = ref<HTMLCanvasElement | null>(null)
+
+let stream: MediaStream | null = null
+let scanTimer = 0
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
-const isMobile = ref(window.innerWidth <= 768)
+const readerOptions: ReaderOptions = {
+  formats: ['QRCode', 'Code128', 'Code39', 'Code93', 'EAN-13', 'EAN-8', 'UPC-A', 'UPC-E', 'ITF', 'Codabar'],
+  tryHarder: true,
+  tryRotate: true,
+  tryDownscale: true,
+  maxNumberOfSymbols: 1,
+}
 
 async function fetchTask() {
   if (taskId.value <= 0) return
@@ -124,7 +141,7 @@ function selectTask(row: RecycleTask) {
   taskId.value = row.id
   router.replace(`/scan/${row.id}`)
   fetchTask()
-  startScanner()
+  nextTick(startScanner)
 }
 
 function addManual() {
@@ -147,42 +164,87 @@ async function submitScan() {
   fetchTask()
 }
 
-function startScanner() {
+async function startScanner() {
+  cameraError.value = ''
+  if (!videoRef.value) return
+
   try {
-    scanner = new Html5Qrcode('reader')
-    const qrboxSize = isMobile.value
-      ? { width: Math.min(window.innerWidth - 80, 280), height: 150 }
-      : { width: 250, height: 150 }
-    scanner.start(
-      { facingMode: 'environment' },
-      { fps: 10, qrbox: qrboxSize },
-      (text) => {
-        if (text && !scannedSNs.value.includes(text)) {
-          scannedSNs.value.push(text)
-          ElMessage.success('扫描: ' + text)
-        }
+    // Pre-load WASM module while requesting camera
+    const wasmReady = getZXingModule()
+
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: 'environment',
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
       },
-      () => {}
-    ).catch(() => {
-      const el = document.getElementById('reader')
-      if (el) el.innerHTML = '<div style="text-align:center;padding:40px;color:#999;">摄像头不可用，请手动输入串码</div>'
+      audio: false,
     })
-  } catch (e) {
-    console.warn('Scanner init failed')
+
+    videoRef.value.srcObject = stream
+    await videoRef.value.play()
+    await wasmReady
+
+    scanning.value = true
+    scanLoop()
+  } catch (err: any) {
+    console.error('Scanner start failed:', err)
+    cameraError.value = '摄像头不可用: ' + (err?.message || err)
   }
 }
 
+function scanLoop() {
+  if (!scanning.value || !videoRef.value || !canvasRef.value) return
+
+  const video = videoRef.value
+  const canvas = canvasRef.value
+
+  if (video.readyState === video.HAVE_ENOUGH_DATA) {
+    canvas.width = video.videoWidth
+    canvas.height = video.videoHeight
+    const ctx = canvas.getContext('2d', { willReadFrequently: true })
+    if (ctx) {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+
+      readBarcodesFromImageData(imageData, readerOptions).then((results) => {
+        for (const result of results) {
+          if (result.isValid && result.text) {
+            onBarcodeDetected(result.text)
+          }
+        }
+      }).catch(() => {})
+    }
+  }
+
+  scanTimer = requestAnimationFrame(scanLoop)
+}
+
+function onBarcodeDetected(text: string) {
+  if (!text || scannedSNs.value.includes(text)) return
+  scannedSNs.value.push(text)
+  ElMessage.success('扫描: ' + text)
+}
+
 function stopScanner() {
-  if (scanner) {
-    try { scanner.stop() } catch (e) {}
-    scanner = null
+  scanning.value = false
+  if (scanTimer) {
+    cancelAnimationFrame(scanTimer)
+    scanTimer = 0
+  }
+  if (stream) {
+    stream.getTracks().forEach((t) => t.stop())
+    stream = null
+  }
+  if (videoRef.value) {
+    videoRef.value.srcObject = null
   }
 }
 
 onMounted(() => {
   if (taskId.value > 0) {
     fetchTask()
-    startScanner()
+    nextTick(startScanner)
   } else {
     searchTasks()
   }
@@ -201,7 +263,43 @@ onUnmounted(() => {
 .terminals-hint { font-size: 13px; color: #666; background: #f6f6f6; padding: 8px 12px; border-radius: 6px; word-break: break-all; }
 .progress-text { margin-top: 8px; font-size: 14px; font-weight: 600; }
 .scanner-card { margin-top: 16px; }
-#reader { max-width: 400px; margin: 0 auto; border-radius: 12px; overflow: hidden; }
+.scanner-viewport {
+  position: relative;
+  max-width: 400px;
+  margin: 0 auto;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #000;
+  aspect-ratio: 4 / 3;
+}
+.scanner-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.scanner-canvas { display: none; }
+.camera-error {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 20px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.7);
+  font-size: 14px;
+}
+.scan-indicator {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.5);
+  color: #67c23a;
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
 .manual-row { margin-top: 12px; }
 .scanned-card { margin-top: 16px; }
 .card-header { display: flex; justify-content: space-between; align-items: center; }
@@ -215,6 +313,6 @@ code { background: #f0f0f0; padding: 2px 8px; border-radius: 4px; font-family: m
   .card-header-btns { width: 100%; }
   .card-header-btns .el-button { flex: 1; }
   :deep(.hide-mobile) { display: none !important; }
-  #reader { max-width: 100%; }
+  .scanner-viewport { max-width: 100%; }
 }
 </style>
