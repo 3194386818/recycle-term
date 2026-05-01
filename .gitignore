@@ -27,3 +27,6 @@ recycle-term-frontend/dist/
 # Env
 .env
 .env.local
+
+# Secrets
+gitToken.txt

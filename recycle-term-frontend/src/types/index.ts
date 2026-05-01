@@ -35,6 +35,7 @@ export interface Stats {
   completed: number
   pending: number
   needVisit: number
+  failed: number
   totalScanned: number
 }
 

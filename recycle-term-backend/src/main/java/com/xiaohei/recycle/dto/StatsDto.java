@@ -10,5 +10,6 @@ public class StatsDto {
     private long completed;
     private long pending;
     private long needVisit;
+    private long failed;
     private long totalScanned;
 }

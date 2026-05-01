@@ -3,8 +3,8 @@
     <!-- Stats cards: clickable filters -->
     <el-row :gutter="12" class="stats-row">
       <el-col :xs="12" :sm="6" v-for="item in statCards" :key="item.key">
-        <el-card shadow="hover" class="stat-card" :class="{ active: activeFilter === item.key }" @click="setFilter(item.key)">
-          <div class="stat-num">{{ item.value }}</div>
+        <el-card shadow="hover" class="stat-card" :class="{ active: activeFilter === item.key }" :style="{ borderTop: `3px solid ${item.color}` }" @click="setFilter(item.key)">
+          <div class="stat-num" :style="{ color: item.color }">{{ item.value }}</div>
           <div class="stat-label">{{ item.label }}</div>
         </el-card>
       </el-col>
@@ -12,7 +12,7 @@
 
     <!-- Toolbar: search only -->
     <el-card shadow="never" class="toolbar-card">
-      <el-input v-model="keyword" placeholder="搜索产品号、号码、姓名、地址..." clearable @input="debouncedFetch">
+      <el-input v-model="keyword" placeholder="搜索产品号、姓名、地址..." clearable @input="debouncedFetch">
         <template #prefix><el-icon><Search /></el-icon></template>
       </el-input>
     </el-card>
@@ -20,9 +20,8 @@
     <!-- Table -->
     <el-card shadow="never">
       <el-table :data="tasks" v-loading="loading" stripe @row-click="goDetail" style="cursor:pointer">
-        <el-table-column label="产品号" prop="detailDesc" min-width="140" show-overflow-tooltip />
+        <el-table-column label="产品号" prop="phoneNumber" min-width="130" show-overflow-tooltip />
         <el-table-column label="用户名称" prop="userName" min-width="90" />
-        <el-table-column label="用户电话" prop="phoneNumber" min-width="120" class-name="hide-mobile" header-class-name="hide-mobile" />
         <el-table-column label="用户地址" prop="userAddress" show-overflow-tooltip min-width="160" class-name="hide-mobile" header-class-name="hide-mobile" />
         <el-table-column label="接入间" prop="accessRoom" width="100" show-overflow-tooltip class-name="hide-mobile" header-class-name="hide-mobile" />
         <el-table-column label="应回收" width="70" align="center">
@@ -38,7 +37,7 @@
         </el-table-column>
         <el-table-column label="操作" :width="isMobile ? 140 : 260" fixed="right">
           <template #default="{ row }">
-            <el-button size="small" @click.stop="copyProduct(row.detailDesc)">复制产品号</el-button>
+            <el-button size="small" @click.stop="copyProduct(row.phoneNumber)">复制产品号</el-button>
             <el-button size="small" type="primary" @click.stop="$router.push(`/scan/${row.id}`)">
               <el-icon><Camera /></el-icon><span class="btn-text">扫码</span>
             </el-button>
@@ -91,13 +90,13 @@ const total = ref(0)
 const keyword = ref('')
 const activeFilter = ref('待回收')
 
-const stats = ref<Stats>({ total: 0, completed: 0, pending: 0, needVisit: 0, totalScanned: 0 })
+const stats = ref<Stats>({ total: 0, completed: 0, pending: 0, needVisit: 0, failed: 0, totalScanned: 0 })
 
 const statCards = ref([
-  { key: '全部', label: '总任务', value: 0 },
-  { key: '待回收', label: '待回收', value: 0 },
-  { key: '已完成', label: '已完成', value: 0 },
-  { key: '已上门', label: '已上门', value: 0 },
+  { key: '全部', label: '总任务', value: 0, color: '#1677ff' },
+  { key: '待回收', label: '待回收', value: 0, color: '#faad14' },
+  { key: '已完成', label: '已完成', value: 0, color: '#52c41a' },
+  { key: '已失败', label: '已失败', value: 0, color: '#ff4d4f' },
 ])
 
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
@@ -138,7 +137,7 @@ async function fetchStats() {
   statCards.value[0].value = res.data.total
   statCards.value[1].value = res.data.pending
   statCards.value[2].value = res.data.completed
-  statCards.value[3].value = res.data.needVisit
+  statCards.value[3].value = res.data.failed
 }
 
 async function handleStatusChange(row: RecycleTask, status: string) {

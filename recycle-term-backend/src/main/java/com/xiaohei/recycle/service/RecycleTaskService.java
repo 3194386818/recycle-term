@@ -39,7 +39,14 @@ public class RecycleTaskService {
                 ));
             }
             if (StringUtils.hasText(status)) {
-                predicates.add(cb.equal(root.get("status"), status));
+                if ("待回收".equals(status)) {
+                    predicates.add(cb.or(
+                        cb.equal(root.get("status"), status),
+                        cb.isNull(root.get("status"))
+                    ));
+                } else {
+                    predicates.add(cb.equal(root.get("status"), status));
+                }
             } else {
                 if (completed != null) {
                     predicates.add(cb.equal(root.get("completed"), completed));
@@ -75,10 +82,15 @@ public class RecycleTaskService {
 
     public StatsDto getStats() {
         long total = taskRepository.count();
-        long completed = taskRepository.count((root, query, cb) -> cb.equal(root.get("completed"), true));
+        long completed = taskRepository.count((root, query, cb) -> cb.equal(root.get("status"), "已完成"));
+        long pending = taskRepository.count((root, query, cb) -> cb.or(
+            cb.equal(root.get("status"), "待回收"),
+            cb.isNull(root.get("status"))
+        ));
         long needVisit = taskRepository.count((root, query, cb) -> cb.equal(root.get("needVisit"), true));
+        long failed = taskRepository.count((root, query, cb) -> cb.equal(root.get("status"), "已失败"));
         long totalScanned = recordRepository.count();
-        return new StatsDto(total, completed, total - completed, needVisit, totalScanned);
+        return new StatsDto(total, completed, pending, needVisit, failed, totalScanned);
     }
 
     @Transactional
