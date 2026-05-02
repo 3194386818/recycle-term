@@ -29,7 +29,7 @@ export function adminLogin(username: string, password: string) {
   return adminApi.post<ApiResult<{ token: string; username: string }>>('/login', { username, password })
 }
 
-export function getAdminTasks(params: { keyword?: string; page?: number; size?: number }) {
+export function getAdminTasks(params: { keyword?: string; status?: number; page?: number; size?: number }) {
   return adminApi.get<ApiResult<PageResult<RecycleTask>>>('/tasks', { params })
 }
 

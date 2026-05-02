@@ -9,9 +9,11 @@ import com.xiaohei.recycle.repository.AdminUserRepository;
 import com.xiaohei.recycle.repository.OperationLogRepository;
 import com.xiaohei.recycle.repository.RecycleTaskRepository;
 import com.xiaohei.recycle.util.JwtUtil;
+import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import jakarta.annotation.PostConstruct;
@@ -53,12 +55,24 @@ public class AdminService {
         return result;
     }
 
-    public Page<RecycleTask> getTasks(String keyword, Pageable pageable) {
-        if (keyword != null && !keyword.isBlank()) {
-            String like = "%" + keyword + "%";
-            return taskRepository.searchByKeyword(like, pageable);
-        }
-        return taskRepository.findAll(pageable);
+    public Page<RecycleTask> getTasks(String keyword, Integer status, Pageable pageable) {
+        Specification<RecycleTask> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            if (keyword != null && !keyword.isBlank()) {
+                String like = "%" + keyword + "%";
+                predicates.add(cb.or(
+                    cb.like(root.get("phoneNumber"), like),
+                    cb.like(root.get("productId"), like),
+                    cb.like(root.get("userName"), like),
+                    cb.like(root.get("userAddress"), like)
+                ));
+            }
+            if (status != null) {
+                predicates.add(cb.equal(root.get("status"), status));
+            }
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+        return taskRepository.findAll(spec, pageable);
     }
 
     public RecycleTask createTask(TaskCreateDto dto) {

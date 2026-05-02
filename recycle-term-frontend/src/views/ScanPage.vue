@@ -36,8 +36,13 @@
         </div>
       </el-card>
 
-      <!-- Camera -->
-      <el-card shadow="never" class="scanner-card">
+      <!-- Locked notice when status >= 2 -->
+      <el-alert v-if="(task?.status ?? 0) >= 2" type="warning" :closable="false" show-icon style="margin-top:16px">
+        <template #title>该任务已{{ statusTypeMap[task?.status ?? 0]?.label }}，无法继续操作</template>
+      </el-alert>
+
+      <!-- Camera (only when status < 2) -->
+      <el-card v-if="(task?.status ?? 0) < 2" shadow="never" class="scanner-card">
         <div class="scanner-viewport">
           <video ref="videoRef" class="scanner-video" autoplay playsinline muted></video>
           <div v-if="cameraError" class="camera-error">{{ cameraError }}</div>
@@ -58,7 +63,7 @@
         <template #header>
           <div class="card-header">
             <span>已扫描串码 ({{ scannedSNs.length }})</span>
-            <div class="card-header-btns">
+            <div v-if="(task?.status ?? 0) < 2" class="card-header-btns">
               <el-button type="success" size="small" :disabled="scannedSNs.length === 0" @click="submitScan">
                 提交保存
               </el-button>
@@ -75,13 +80,13 @@
               <code>{{ row.sn }}</code>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="60">
+          <el-table-column v-if="(task?.status ?? 0) < 2" label="操作" width="60">
             <template #default="{ row }">
               <el-button type="danger" size="small" link @click="scannedSNs.splice(row.idx, 1)">删除</el-button>
             </template>
           </el-table-column>
         </el-table>
-        <el-empty v-if="scannedSNs.length === 0" description="扫描条形码/二维码或手动输入串码" />
+        <el-empty v-if="scannedSNs.length === 0" :description="(task?.status ?? 0) >= 2 ? '该任务已锁定' : '扫描条形码/二维码或手动输入串码'" />
       </el-card>
     </template>
   </div>
@@ -251,10 +256,12 @@ function stopScanner() {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   if (taskId.value > 0) {
-    fetchTask()
-    nextTick(startScanner)
+    await fetchTask()
+    if ((task.value?.status ?? 0) < 2) {
+      nextTick(startScanner)
+    }
   } else {
     searchTasks()
   }

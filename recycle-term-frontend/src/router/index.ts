@@ -36,6 +36,8 @@ const routes = [
       { path: '', redirect: '/admin/dashboard' },
       { path: 'dashboard', name: 'Dashboard', component: () => import('../views/admin/Dashboard.vue') },
       { path: 'tasks', name: 'TaskManage', component: () => import('../views/admin/TaskManage.vue') },
+      { path: 'review', name: 'ReviewList', component: () => import('../views/admin/ReviewList.vue') },
+      { path: 'archive', name: 'ArchiveList', component: () => import('../views/admin/ArchiveList.vue') },
       { path: 'batch', name: 'BatchImport', component: () => import('../views/admin/BatchImport.vue') },
       { path: 'logs', name: 'OperationLogs', component: () => import('../views/admin/OperationLogs.vue') },
     ],

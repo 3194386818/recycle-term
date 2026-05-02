@@ -41,11 +41,12 @@ public class AdminController {
     @GetMapping("/tasks")
     public Result<Page<RecycleTask>> getTasks(
             @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Integer status,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
         PageRequest pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id"));
-        return Result.ok(adminService.getTasks(keyword, pageable));
+        return Result.ok(adminService.getTasks(keyword, status, pageable));
     }
 
     @PostMapping("/tasks")

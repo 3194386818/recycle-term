@@ -31,6 +31,14 @@
             <el-icon><List /></el-icon>
             <template #title>任务管理</template>
           </el-menu-item>
+          <el-menu-item index="/admin/review">
+            <el-icon><Checked /></el-icon>
+            <template #title>审核</template>
+          </el-menu-item>
+          <el-menu-item index="/admin/archive">
+            <el-icon><FolderChecked /></el-icon>
+            <template #title>归档</template>
+          </el-menu-item>
           <el-menu-item index="/admin/batch">
             <el-icon><Upload /></el-icon>
             <template #title>批量导入</template>

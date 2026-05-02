@@ -54,14 +54,14 @@
       <template #header>
         <div class="card-header">
           <span>已扫描串码 ({{ records.length }})</span>
-          <el-button type="primary" size="small" @click="$router.push(`/scan/${task.id}`)">继续扫码</el-button>
+          <el-button v-if="task.status < 2" type="primary" size="small" @click="$router.push(`/scan/${task.id}`)">继续扫码</el-button>
         </div>
       </template>
-      <el-table :data="records" stripe v-loading="recordsLoading">
+        <el-table :data="records" stripe v-loading="recordsLoading">
         <el-table-column label="序号" type="index" width="50" />
         <el-table-column label="终端串码" prop="serialNumber" />
         <el-table-column label="扫描时间" prop="scannedAt" width="160" class-name="hide-mobile" header-class-name="hide-mobile" />
-        <el-table-column label="操作" width="70">
+        <el-table-column v-if="task.status < 2" label="操作" width="70">
           <template #default="{ row }">
             <el-button size="small" type="danger" @click="removeRecord(row.id)">删除</el-button>
           </template>
