@@ -19,7 +19,7 @@
 
       <el-card shadow="never">
         <template #header><span>JSON 批量导入</span></template>
-        <el-alert title="每个任务需包含 userName 和 phoneNumber 字段" type="info" :closable="false" style="margin-bottom:12px" />
+        <el-alert title="每个任务需包含 userName、phoneNumber(用户号码) 和 productId(产品号) 字段" type="info" :closable="false" style="margin-bottom:12px" />
         <el-input v-model="jsonInput" type="textarea" :rows="10" placeholder='[
   { "userName": "张三", "phoneNumber": "13800138000", "userAddress": "地址", "area": "南沙", "expectedCount": 5 },
   { "userName": "李四", "phoneNumber": "13900139000", "userAddress": "地址", "area": "番禺", "expectedCount": 3 }
@@ -80,8 +80,8 @@ async function handleJsonImport() {
 
 function fillSample() {
   jsonInput.value = JSON.stringify([
-    { userName: '张三', phoneNumber: '13800138000', userAddress: '广州市南沙区黄阁镇xxx', area: '南沙', expectedCount: 5, engineerName: '王工', engineerPhone: '13700137000' },
-    { userName: '李四', phoneNumber: '13900139000', userAddress: '广州市番禺区市桥xxx', area: '番禺', expectedCount: 3, engineerName: '赵工', engineerPhone: '13600136000' },
+    { userName: '张三', phoneNumber: '13800138000', productId: '02001559573', userAddress: '广州市南沙区黄阁镇xxx', area: '南沙', expectedCount: 5, engineerName: '王工', engineerPhone: '13700137000' },
+    { userName: '李四', phoneNumber: '13900139000', productId: '02001830568', userAddress: '广州市番禺区市桥xxx', area: '番禺', expectedCount: 3, engineerName: '赵工', engineerPhone: '13600136000' },
   ], null, 2)
 }
 </script>

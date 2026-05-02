@@ -5,6 +5,7 @@ USE recycle_term;
 CREATE TABLE IF NOT EXISTS recycle_task (
     id              BIGINT AUTO_INCREMENT PRIMARY KEY,
     phone_number    VARCHAR(20)       COMMENT '用户号码',
+    product_id      VARCHAR(20)       COMMENT '产品号（020开头）',
     user_name       VARCHAR(50)       COMMENT '用户名称',
     user_address    VARCHAR(500)      COMMENT '用户地址',
     area            VARCHAR(50)       COMMENT '区域',
@@ -19,6 +20,7 @@ CREATE TABLE IF NOT EXISTS recycle_task (
     dev_dept        VARCHAR(100)      COMMENT '发展部门',
     dev_person      VARCHAR(50)       COMMENT '发展员工',
     need_visit      TINYINT DEFAULT 0 COMMENT '是否上门 0否 1是',
+    status          TINYINT DEFAULT 0 COMMENT '状态：0待回收 1已上门 2已完成 3已失败',
     completed       TINYINT DEFAULT 0 COMMENT '是否完成 0否 1是',
     completed_at    DATETIME          COMMENT '完成时间',
     remark          VARCHAR(500)      COMMENT '备注',

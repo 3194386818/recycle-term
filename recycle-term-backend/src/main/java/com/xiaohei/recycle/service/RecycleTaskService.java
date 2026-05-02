@@ -17,6 +17,7 @@ import org.springframework.util.StringUtils;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -25,33 +26,22 @@ public class RecycleTaskService {
     private final RecycleTaskRepository taskRepository;
     private final TerminalRecordRepository recordRepository;
 
-    public Page<RecycleTask> search(String keyword, Boolean completed, Boolean needVisit, String status, Pageable pageable) {
+    public Page<RecycleTask> search(String keyword, Boolean completed, Boolean needVisit, Integer status, Pageable pageable) {
         Specification<RecycleTask> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
             if (StringUtils.hasText(keyword)) {
                 String like = "%" + keyword + "%";
                 predicates.add(cb.or(
                     cb.like(root.get("phoneNumber"), like),
+                    cb.like(root.get("productId"), like),
                     cb.like(root.get("userName"), like),
                     cb.like(root.get("userAddress"), like),
                     cb.like(root.get("terminals"), like),
                     cb.like(root.get("detailDesc"), like)
                 ));
             }
-            if (StringUtils.hasText(status)) {
-                if ("待回收".equals(status)) {
-                    predicates.add(cb.and(
-                        cb.or(cb.equal(root.get("status"), status), cb.isNull(root.get("status"))),
-                        cb.or(cb.equal(root.get("completed"), false), cb.isNull(root.get("completed")))
-                    ));
-                } else if ("已完成".equals(status)) {
-                    predicates.add(cb.or(
-                        cb.equal(root.get("status"), status),
-                        cb.and(cb.equal(root.get("completed"), true), cb.isNull(root.get("status")))
-                    ));
-                } else {
-                    predicates.add(cb.equal(root.get("status"), status));
-                }
+            if (status != null) {
+                predicates.add(cb.equal(root.get("status"), status));
             } else {
                 if (completed != null) {
                     predicates.add(cb.equal(root.get("completed"), completed));
@@ -81,7 +71,7 @@ public class RecycleTaskService {
         }
         if (dto.getStatus() != null) {
             task.setStatus(dto.getStatus());
-            if ("已完成".equals(dto.getStatus())) {
+            if (dto.getStatus() == 2) {
                 task.setCompleted(true);
                 task.setCompletedAt(LocalDateTime.now());
             }
@@ -92,23 +82,26 @@ public class RecycleTaskService {
         return taskRepository.save(task);
     }
 
+    @Transactional
+    public RecycleTask updateStatus(Long id, Integer status) {
+        RecycleTask task = getById(id);
+        task.setStatus(status);
+        if (status == 2) {
+            task.setCompleted(true);
+            task.setCompletedAt(LocalDateTime.now());
+        } else if (status == 0) {
+            task.setCompleted(false);
+            task.setCompletedAt(null);
+        }
+        return taskRepository.save(task);
+    }
+
     public StatsDto getStats() {
         long total = taskRepository.count();
-        // 已完成: status='已完成' OR (completed=true AND status IS NULL)
-        long completed = taskRepository.count((root, query, cb) -> cb.or(
-            cb.equal(root.get("status"), "已完成"),
-            cb.and(cb.equal(root.get("completed"), true), cb.isNull(root.get("status")))
-        ));
-        // 待回收: (status='待回收' OR status IS NULL) AND completed=false
-        long pending = taskRepository.count((root, query, cb) -> cb.and(
-            cb.or(
-                cb.equal(root.get("status"), "待回收"),
-                cb.isNull(root.get("status"))
-            ),
-            cb.or(cb.equal(root.get("completed"), false), cb.isNull(root.get("completed")))
-        ));
+        long completed = taskRepository.count((root, query, cb) -> cb.equal(root.get("status"), 2));
+        long pending = taskRepository.count((root, query, cb) -> cb.equal(root.get("status"), 0));
         long needVisit = taskRepository.count((root, query, cb) -> cb.equal(root.get("needVisit"), true));
-        long failed = taskRepository.count((root, query, cb) -> cb.equal(root.get("status"), "已失败"));
+        long failed = taskRepository.count((root, query, cb) -> cb.equal(root.get("status"), 3));
         long totalScanned = recordRepository.count();
         return new StatsDto(total, completed, pending, needVisit, failed, totalScanned);
     }
@@ -117,5 +110,21 @@ public class RecycleTaskService {
     public void deleteById(Long id) {
         recordRepository.deleteByTaskId(id);
         taskRepository.deleteById(id);
+    }
+
+    @Transactional
+    public int backfillProductId(Map<String, String> mapping) {
+        int updated = 0;
+        for (var entry : mapping.entrySet()) {
+            List<RecycleTask> tasks = taskRepository.findByPhoneNumber(entry.getKey());
+            for (RecycleTask task : tasks) {
+                if (task.getProductId() == null || task.getProductId().isBlank()) {
+                    task.setProductId(entry.getValue());
+                    taskRepository.save(task);
+                    updated++;
+                }
+            }
+        }
+        return updated;
     }
 }

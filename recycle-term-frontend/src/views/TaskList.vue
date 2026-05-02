@@ -12,7 +12,7 @@
 
     <!-- Toolbar: search only -->
     <el-card shadow="never" class="toolbar-card">
-      <el-input v-model="keyword" placeholder="搜索产品号、姓名、地址..." clearable @input="debouncedFetch">
+      <el-input v-model="keyword" placeholder="搜索用户号码、产品号、姓名、地址..." clearable @input="debouncedFetch">
         <template #prefix><el-icon><Search /></el-icon></template>
       </el-input>
     </el-card>
@@ -20,7 +20,8 @@
     <!-- Table -->
     <el-card shadow="never">
       <el-table :data="tasks" v-loading="loading" stripe @row-click="goDetail" style="cursor:pointer">
-        <el-table-column label="产品号" prop="phoneNumber" min-width="130" show-overflow-tooltip />
+        <el-table-column label="产品号" prop="productId" min-width="120" show-overflow-tooltip />
+        <el-table-column label="用户号码" prop="phoneNumber" min-width="120" show-overflow-tooltip class-name="hide-mobile" header-class-name="hide-mobile" />
         <el-table-column label="用户名称" prop="userName" min-width="90" />
         <el-table-column label="用户地址" prop="userAddress" show-overflow-tooltip min-width="160" class-name="hide-mobile" header-class-name="hide-mobile" />
         <el-table-column label="接入间" prop="accessRoom" width="100" show-overflow-tooltip class-name="hide-mobile" header-class-name="hide-mobile" />
@@ -32,23 +33,23 @@
         </el-table-column>
         <el-table-column label="状态" width="90" align="center">
           <template #default="{ row }">
-            <el-tag :type="statusType(row.status)" size="small">{{ row.status || '待回收' }}</el-tag>
+            <el-tag :type="statusTypeMap[row.status]?.type || 'info'" size="small">{{ statusTypeMap[row.status]?.label || '未知' }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column label="操作" :width="isMobile ? 140 : 260" fixed="right">
           <template #default="{ row }">
-            <el-button size="small" @click.stop="copyProduct(row.phoneNumber)">复制产品号</el-button>
+            <el-button size="small" @click.stop="copyProduct(row.productId)">复制产品号</el-button>
             <el-button size="small" type="primary" @click.stop="$router.push(`/scan/${row.id}`)">
               <el-icon><Camera /></el-icon><span class="btn-text">扫码</span>
             </el-button>
-            <el-dropdown trigger="click" @command="(cmd: string) => handleStatusChange(row, cmd)" @click.stop>
+            <el-dropdown trigger="click" @command="(cmd: number) => handleStatusChange(row, cmd)" @click.stop>
               <el-button size="small" type="success">状态</el-button>
               <template #dropdown>
                 <el-dropdown-menu>
-                  <el-dropdown-item command="待回收">待回收</el-dropdown-item>
-                  <el-dropdown-item command="已上门">已上门</el-dropdown-item>
-                  <el-dropdown-item command="已完成">已完成</el-dropdown-item>
-                  <el-dropdown-item command="已失败">已失败</el-dropdown-item>
+                  <el-dropdown-item :command="0">待回收</el-dropdown-item>
+                  <el-dropdown-item :command="1">已上门</el-dropdown-item>
+                  <el-dropdown-item :command="2">已完成</el-dropdown-item>
+                  <el-dropdown-item :command="3">已失败</el-dropdown-item>
                 </el-dropdown-menu>
               </template>
             </el-dropdown>
@@ -74,7 +75,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { getTasks, getStats, updateTask } from '../api'
+import { getTasks, getStats, updateTaskStatus } from '../api'
 import type { RecycleTask, Stats } from '../types'
 
 const router = useRouter()
@@ -88,15 +89,22 @@ const page = ref(0)
 const size = ref(50)
 const total = ref(0)
 const keyword = ref('')
-const activeFilter = ref('待回收')
+const activeFilter = ref<number | '全部'>('全部')
+
+const statusTypeMap: Record<number, { label: string; type: string }> = {
+  0: { label: '待回收', type: 'warning' },
+  1: { label: '已上门', type: 'primary' },
+  2: { label: '已完成', type: 'success' },
+  3: { label: '已失败', type: 'danger' },
+}
 
 const stats = ref<Stats>({ total: 0, completed: 0, pending: 0, needVisit: 0, failed: 0, totalScanned: 0 })
 
 const statCards = ref([
-  { key: '全部', label: '总任务', value: 0, color: '#1677ff' },
-  { key: '待回收', label: '待回收', value: 0, color: '#faad14' },
-  { key: '已完成', label: '已完成', value: 0, color: '#52c41a' },
-  { key: '已失败', label: '已失败', value: 0, color: '#ff4d4f' },
+  { key: '全部' as const, label: '总任务', value: 0, color: '#1677ff' },
+  { key: 0, label: '待回收', value: 0, color: '#faad14' },
+  { key: 2, label: '已完成', value: 0, color: '#52c41a' },
+  { key: 3, label: '已失败', value: 0, color: '#ff4d4f' },
 ])
 
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
@@ -105,7 +113,7 @@ function debouncedFetch() {
   debounceTimer = setTimeout(() => { page.value = 0; fetchTasks() }, 300)
 }
 
-function setFilter(key: string) {
+function setFilter(key: number | '全部') {
   activeFilter.value = key
   page.value = 0
   keyword.value = ''
@@ -140,15 +148,15 @@ async function fetchStats() {
   statCards.value[3].value = res.data.failed
 }
 
-async function handleStatusChange(row: RecycleTask, status: string) {
-  const data: any = { status }
-  if (status === '已完成') {
-    data.completed = true
+async function handleStatusChange(row: RecycleTask, status: number) {
+  try {
+    await updateTaskStatus(row.id, status)
+    ElMessage.success(`已更新为 ${statusTypeMap[status]?.label}`)
+    fetchTasks()
+    fetchStats()
+  } catch (e: any) {
+    ElMessage.error(e.response?.data?.message || '状态更新失败')
   }
-  await updateTask(row.id, data)
-  ElMessage.success(`已更新为 ${status}`)
-  fetchTasks()
-  fetchStats()
 }
 
 function copyProduct(text: string) {
@@ -161,16 +169,6 @@ function copyProduct(text: string) {
   }).catch(() => {
     ElMessage.error('复制失败')
   })
-}
-
-function statusType(status: string) {
-  const map: Record<string, string> = {
-    '待回收': 'warning',
-    '已上门': 'primary',
-    '已完成': 'success',
-    '已失败': 'danger',
-  }
-  return map[status] || 'info'
 }
 
 function goDetail(row: RecycleTask) {

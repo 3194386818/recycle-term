@@ -1,6 +1,7 @@
 export interface RecycleTask {
   id: number
   phoneNumber: string
+  productId: string
   userName: string
   userAddress: string
   area: string
@@ -15,7 +16,7 @@ export interface RecycleTask {
   devDept: string
   devPerson: string
   needVisit: boolean
-  status: string
+  status: number
   completed: boolean
   completedAt: string | null
   remark: string

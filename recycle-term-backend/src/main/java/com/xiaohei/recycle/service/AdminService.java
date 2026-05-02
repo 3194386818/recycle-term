@@ -107,6 +107,7 @@ public class AdminService {
 
     private void copyDtoToEntity(TaskCreateDto dto, RecycleTask task) {
         task.setPhoneNumber(dto.getPhoneNumber());
+        task.setProductId(dto.getProductId());
         task.setUserName(dto.getUserName());
         task.setUserAddress(dto.getUserAddress());
         task.setArea(dto.getArea());

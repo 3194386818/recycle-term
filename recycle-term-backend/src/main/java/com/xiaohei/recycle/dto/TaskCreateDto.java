@@ -5,6 +5,7 @@ import lombok.Data;
 @Data
 public class TaskCreateDto {
     private String phoneNumber;
+    private String productId;
     private String userName;
     private String userAddress;
     private String area;

@@ -15,7 +15,7 @@ export function getTasks(params: {
   keyword?: string
   completed?: boolean | null
   needVisit?: boolean | null
-  status?: string
+  status?: number
   page?: number
   size?: number
 }) {
@@ -28,6 +28,10 @@ export function getTaskById(id: number) {
 
 export function updateTask(id: number, data: Partial<RecycleTask>) {
   return api.put<ApiResult<RecycleTask>>(`/tasks/${id}`, data)
+}
+
+export function updateTaskStatus(id: number, status: number) {
+  return api.patch<ApiResult<RecycleTask>>(`/tasks/${id}/status`, null, { params: { status } })
 }
 
 export function deleteTask(id: number) {

@@ -23,6 +23,7 @@
     <el-card shadow="never" class="info-card">
       <el-descriptions :column="descColumn" border>
         <el-descriptions-item label="用户号码">{{ task.phoneNumber }}</el-descriptions-item>
+        <el-descriptions-item label="产品号">{{ task.productId || '-' }}</el-descriptions-item>
         <el-descriptions-item label="用户名称">{{ task.userName }}</el-descriptions-item>
         <el-descriptions-item label="用户地址" :span="descColumn">{{ task.userAddress }}</el-descriptions-item>
         <el-descriptions-item label="区域">{{ task.area }}</el-descriptions-item>
@@ -34,7 +35,7 @@
         <el-descriptions-item label="应回收数量">{{ task.expectedCount || 0 }}</el-descriptions-item>
         <el-descriptions-item label="FTTR主光猫">{{ task.fttrCount || 0 }}</el-descriptions-item>
         <el-descriptions-item label="状态">
-          <el-tag :type="task.completed ? 'success' : 'warning'">{{ task.completed ? '已完成' : '待回收' }}</el-tag>
+          <el-tag :type="statusTypeMap[task.status]?.type || 'info'">{{ statusTypeMap[task.status]?.label || '未知' }}</el-tag>
         </el-descriptions-item>
         <el-descriptions-item label="是否上门">
           <el-tag :type="task.needVisit ? 'primary' : 'info'">{{ task.needVisit ? '是' : '否' }}</el-tag>
@@ -72,7 +73,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { getTaskById, updateTask, getRecordsByTaskId, deleteRecord } from '../api'
+import { getTaskById, updateTaskStatus, getRecordsByTaskId, deleteRecord } from '../api'
 import type { RecycleTask, TerminalRecord } from '../types'
 
 const route = useRoute()
@@ -85,6 +86,13 @@ const recordsLoading = ref(false)
 const isMobile = ref(window.innerWidth <= 768)
 window.addEventListener('resize', () => { isMobile.value = window.innerWidth <= 768 })
 const descColumn = computed(() => isMobile.value ? 1 : 2)
+
+const statusTypeMap: Record<number, { label: string; type: string }> = {
+  0: { label: '待回收', type: 'warning' },
+  1: { label: '已上门', type: 'primary' },
+  2: { label: '已完成', type: 'success' },
+  3: { label: '已失败', type: 'danger' },
+}
 
 async function fetchTask() {
   const { data: res } = await getTaskById(taskId)
@@ -103,15 +111,17 @@ async function fetchRecords() {
 
 async function toggleComplete() {
   if (!task.value) return
-  await updateTask(taskId, { completed: !task.value.completed })
-  ElMessage.success(task.value.completed ? '已撤销' : '已完成')
+  const newStatus = task.value.status === 2 ? 0 : 2
+  await updateTaskStatus(taskId, newStatus)
+  ElMessage.success(newStatus === 2 ? '已标记完成' : '已撤销')
   fetchTask()
 }
 
 async function toggleVisit() {
   if (!task.value) return
-  await updateTask(taskId, { needVisit: !task.value.needVisit })
-  ElMessage.success(task.value.needVisit ? '已取消上门' : '已标记上门')
+  const newStatus = task.value.status === 1 ? 0 : 1
+  await updateTaskStatus(taskId, newStatus)
+  ElMessage.success(newStatus === 1 ? '已标记上门' : '已取消上门')
   fetchTask()
 }
 

@@ -12,13 +12,14 @@
       <el-table :data="tasks" v-loading="loading" stripe>
         <el-table-column label="ID" prop="id" width="60" />
         <el-table-column label="用户" prop="userName" width="100" />
-        <el-table-column label="号码" prop="phoneNumber" width="130" />
+        <el-table-column label="用户号码" prop="phoneNumber" width="120" />
+        <el-table-column label="产品号" prop="productId" width="120" />
         <el-table-column label="地址" prop="userAddress" show-overflow-tooltip min-width="160" />
         <el-table-column label="区域" prop="area" width="80" />
         <el-table-column label="应回收" prop="expectedCount" width="80" align="center" />
         <el-table-column label="状态" width="90" align="center">
           <template #default="{ row }">
-            <el-tag :type="row.completed ? 'success' : 'warning'" size="small">{{ row.completed ? '已完成' : '待回收' }}</el-tag>
+            <el-tag :type="statusTypeMap[row.status]?.type || 'info'" size="small">{{ statusTypeMap[row.status]?.label || '未知' }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column label="操作" width="160" fixed="right">
@@ -42,6 +43,7 @@
         <el-row :gutter="16">
           <el-col :span="12"><el-form-item label="用户名称"><el-input v-model="form.userName" /></el-form-item></el-col>
           <el-col :span="12"><el-form-item label="用户号码"><el-input v-model="form.phoneNumber" /></el-form-item></el-col>
+          <el-col :span="12"><el-form-item label="产品号"><el-input v-model="form.productId" /></el-form-item></el-col>
           <el-col :span="24"><el-form-item label="用户地址"><el-input v-model="form.userAddress" /></el-form-item></el-col>
           <el-col :span="12"><el-form-item label="区域"><el-input v-model="form.area" /></el-form-item></el-col>
           <el-col :span="12"><el-form-item label="工程师"><el-input v-model="form.engineerName" /></el-form-item></el-col>
@@ -76,6 +78,13 @@ const page = ref(0)
 const size = ref(20)
 const total = ref(0)
 const keyword = ref('')
+
+const statusTypeMap: Record<number, { label: string; type: string }> = {
+  0: { label: '待回收', type: 'warning' },
+  1: { label: '已上门', type: 'primary' },
+  2: { label: '已完成', type: 'success' },
+  3: { label: '已失败', type: 'danger' },
+}
 
 const dialogVisible = ref(false)
 const editId = ref<number | null>(null)

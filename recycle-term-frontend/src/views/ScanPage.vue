@@ -9,12 +9,13 @@
     <!-- Task selector when no task ID -->
     <el-card v-if="taskId === 0" shadow="never" class="task-select-card">
       <h3>选择要回收的任务</h3>
-      <el-input v-model="searchKeyword" placeholder="搜索用户号码或姓名..." clearable @input="debouncedSearch" style="margin: 12px 0">
+      <el-input v-model="searchKeyword" placeholder="搜索用户号码、产品号或姓名..." clearable @input="debouncedSearch" style="margin: 12px 0">
         <template #prefix><el-icon><Search /></el-icon></template>
       </el-input>
       <el-table :data="taskList" stripe @row-click="selectTask" style="cursor:pointer" max-height="400">
         <el-table-column label="用户" prop="userName" width="80" />
-        <el-table-column label="号码" prop="phoneNumber" width="120" />
+        <el-table-column label="用户号码" prop="phoneNumber" width="120" />
+        <el-table-column label="产品号" prop="productId" width="120" show-overflow-tooltip class-name="hide-mobile" header-class-name="hide-mobile" />
         <el-table-column label="地址" prop="userAddress" show-overflow-tooltip class-name="hide-mobile" header-class-name="hide-mobile" />
         <el-table-column label="应回收" prop="expectedCount" width="70" align="center" />
       </el-table>
@@ -24,9 +25,9 @@
     <template v-if="taskId > 0">
       <el-card shadow="never" class="info-card">
         <div class="task-info">
-          <span><strong>{{ task?.userName }}</strong> ({{ task?.phoneNumber }})</span>
-          <el-tag :type="task?.completed ? 'success' : 'warning'" size="small">
-            {{ task?.completed ? '已完成' : '待回收' }}
+          <span><strong>{{ task?.userName }}</strong> ({{ task?.phoneNumber }}) 产品号: {{ task?.productId || '-' }}</span>
+          <el-tag :type="statusTypeMap[task?.status ?? 0]?.type || 'info'" size="small">
+            {{ statusTypeMap[task?.status ?? 0]?.label || '未知' }}
           </el-tag>
         </div>
         <div class="terminals-hint">{{ task?.terminals }}</div>
@@ -105,6 +106,13 @@ const searchKeyword = ref('')
 const taskList = ref<RecycleTask[]>([])
 const cameraError = ref('')
 const scanning = ref(false)
+
+const statusTypeMap: Record<number, { label: string; type: string }> = {
+  0: { label: '待回收', type: 'warning' },
+  1: { label: '已上门', type: 'primary' },
+  2: { label: '已完成', type: 'success' },
+  3: { label: '已失败', type: 'danger' },
+}
 
 const videoRef = ref<HTMLVideoElement | null>(null)
 const canvasRef = ref<HTMLCanvasElement | null>(null)

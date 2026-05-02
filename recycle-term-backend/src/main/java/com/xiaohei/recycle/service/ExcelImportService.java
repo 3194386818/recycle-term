@@ -36,6 +36,7 @@ public class ExcelImportService {
 
                 RecycleTask task = new RecycleTask();
                 task.setPhoneNumber(getStringCell(row, 0));
+                task.setProductId(getStringCell(row, 6));
                 task.setEngineerName(getStringCell(row, 4));
                 task.setEngineerPhone(getStringCell(row, 2));
                 task.setDetailDesc(getStringCell(row, 5));

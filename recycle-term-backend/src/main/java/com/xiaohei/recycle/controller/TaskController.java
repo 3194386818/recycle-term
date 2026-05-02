@@ -23,7 +23,7 @@ public class TaskController {
             @RequestParam(defaultValue = "") String keyword,
             @RequestParam(required = false) Boolean completed,
             @RequestParam(required = false) Boolean needVisit,
-            @RequestParam(required = false) String status,
+            @RequestParam(required = false) Integer status,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "100") int size
     ) {
@@ -42,6 +42,11 @@ public class TaskController {
     @PutMapping("/{id}")
     public Result<RecycleTask> update(@PathVariable Long id, @RequestBody TaskUpdateDto dto) {
         return Result.ok(taskService.update(id, dto));
+    }
+
+    @PatchMapping("/{id}/status")
+    public Result<RecycleTask> updateStatus(@PathVariable Long id, @RequestParam Integer status) {
+        return Result.ok(taskService.updateStatus(id, status));
     }
 
     @DeleteMapping("/{id}")

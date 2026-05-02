@@ -12,6 +12,8 @@ import java.util.List;
 
 public interface RecycleTaskRepository extends JpaRepository<RecycleTask, Long>, JpaSpecificationExecutor<RecycleTask> {
 
+    List<RecycleTask> findByPhoneNumber(String phoneNumber);
+
     Page<RecycleTask> findByPhoneNumberLikeOrUserNameLikeOrUserAddressLike(
             String phone, String name, String address, Pageable pageable);
 
@@ -24,7 +26,7 @@ public interface RecycleTaskRepository extends JpaRepository<RecycleTask, Long>,
     @Query("SELECT t.area, COUNT(t) FROM RecycleTask t GROUP BY t.area ORDER BY COUNT(t) DESC")
     List<Object[]> countGroupByArea();
 
-    @Query("SELECT t FROM RecycleTask t WHERE t.phoneNumber LIKE ?1 OR t.userName LIKE ?2 OR t.userAddress LIKE ?3 OR t.terminals LIKE ?4")
+    @Query("SELECT t FROM RecycleTask t WHERE t.phoneNumber LIKE ?1 OR t.productId LIKE ?1 OR t.userName LIKE ?2 OR t.userAddress LIKE ?3 OR t.terminals LIKE ?4")
     Page<RecycleTask> searchByKeyword(String phone, String name, String address, String terminals, Pageable pageable);
 
     default Page<RecycleTask> searchByKeyword(String keyword, Pageable pageable) {
