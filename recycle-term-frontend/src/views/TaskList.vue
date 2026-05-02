@@ -46,10 +46,17 @@
               <el-button size="small" type="success">状态</el-button>
               <template #dropdown>
                 <el-dropdown-menu>
-                  <el-dropdown-item :command="0">待回收</el-dropdown-item>
-                  <el-dropdown-item :command="1">已上门</el-dropdown-item>
-                  <el-dropdown-item :command="2">已完成</el-dropdown-item>
-                  <el-dropdown-item :command="3">已失败</el-dropdown-item>
+                  <template v-if="row.status === 0">
+                    <el-dropdown-item :command="1">已上门</el-dropdown-item>
+                    <el-dropdown-item :command="3">已失败</el-dropdown-item>
+                  </template>
+                  <template v-else-if="row.status === 1">
+                    <el-dropdown-item :command="2">已完成</el-dropdown-item>
+                    <el-dropdown-item :command="3">已失败</el-dropdown-item>
+                  </template>
+                  <template v-else>
+                    <el-dropdown-item disabled>无可用操作</el-dropdown-item>
+                  </template>
                 </el-dropdown-menu>
               </template>
             </el-dropdown>
@@ -94,8 +101,10 @@ const activeFilter = ref<number | '全部'>('全部')
 const statusTypeMap: Record<number, { label: string; type: string }> = {
   0: { label: '待回收', type: 'warning' },
   1: { label: '已上门', type: 'primary' },
-  2: { label: '已完成', type: 'success' },
-  3: { label: '已失败', type: 'danger' },
+  2: { label: '待审核', type: 'success' },
+  3: { label: '待审核', type: 'danger' },
+  4: { label: '审核成功', type: 'success' },
+  5: { label: '审核失败', type: 'danger' },
 }
 
 const stats = ref<Stats>({ total: 0, completed: 0, pending: 0, needVisit: 0, failed: 0, totalScanned: 0 })
@@ -103,8 +112,8 @@ const stats = ref<Stats>({ total: 0, completed: 0, pending: 0, needVisit: 0, fai
 const statCards = ref([
   { key: '全部' as const, label: '总任务', value: 0, color: '#1677ff' },
   { key: 0, label: '待回收', value: 0, color: '#faad14' },
-  { key: 2, label: '已完成', value: 0, color: '#52c41a' },
-  { key: 3, label: '已失败', value: 0, color: '#ff4d4f' },
+  { key: 4, label: '已归档', value: 0, color: '#52c41a' },
+  { key: 3, label: '待审核', value: 0, color: '#ff4d4f' },
 ])
 
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
@@ -149,6 +158,10 @@ async function fetchStats() {
 }
 
 async function handleStatusChange(row: RecycleTask, status: number) {
+  if (status === 3) {
+    router.push(`/task/${row.id}`)
+    return
+  }
   try {
     await updateTaskStatus(row.id, status)
     ElMessage.success(`已更新为 ${statusTypeMap[status]?.label}`)

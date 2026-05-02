@@ -30,8 +30,8 @@ export function updateTask(id: number, data: Partial<RecycleTask>) {
   return api.put<ApiResult<RecycleTask>>(`/tasks/${id}`, data)
 }
 
-export function updateTaskStatus(id: number, status: number) {
-  return api.patch<ApiResult<RecycleTask>>(`/tasks/${id}/status`, null, { params: { status } })
+export function updateTaskStatus(id: number, status: number, failReason?: string) {
+  return api.patch<ApiResult<RecycleTask>>(`/tasks/${id}/status`, null, { params: { status, failReason } })
 }
 
 export function deleteTask(id: number) {

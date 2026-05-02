@@ -19,6 +19,9 @@ export interface RecycleTask {
   status: number
   completed: boolean
   completedAt: string | null
+  failReason: string
+  reviewRemark: string
+  reviewerId: number | null
   remark: string
   createdAt: string
   updatedAt: string

@@ -22,8 +22,9 @@
             <el-tag :type="statusTypeMap[row.status]?.type || 'info'" size="small">{{ statusTypeMap[row.status]?.label || '未知' }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="160" fixed="right">
+        <el-table-column label="操作" width="220" fixed="right">
           <template #default="{ row }">
+            <el-button v-if="row.status === 2 || row.status === 3" size="small" type="warning" @click="showReview(row)">审核</el-button>
             <el-button size="small" type="primary" @click="showEdit(row)">编辑</el-button>
             <el-popconfirm title="确定删除？" @confirm="handleDelete(row.id)">
               <template #reference>
@@ -63,13 +64,31 @@
         <el-button type="primary" :loading="submitting" @click="handleSubmit">确定</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="reviewDialogVisible" title="审核任务" width="450px" destroy-on-close>
+      <div v-if="reviewingTask" style="margin-bottom:16px">
+        <p><strong>{{ reviewingTask.userName }}</strong> ({{ reviewingTask.productId }})</p>
+        <p>状态：<el-tag :type="statusTypeMap[reviewingTask.status]?.type" size="small">{{ statusTypeMap[reviewingTask.status]?.label }}</el-tag></p>
+        <p v-if="reviewingTask.failReason">失败原因：<el-tag type="danger" size="small">{{ reviewingTask.failReason }}</el-tag></p>
+      </div>
+      <el-form>
+        <el-form-item label="审核备注">
+          <el-input v-model="reviewRemark" type="textarea" :rows="2" placeholder="驳回时请填写原因（可选）" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="reviewDialogVisible = false">取消</el-button>
+        <el-button type="danger" :loading="reviewLoading" @click="submitReview(false)">驳回</el-button>
+        <el-button type="success" :loading="reviewLoading" @click="submitReview(true)">通过</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { getAdminTasks, createTask, updateAdminTask, deleteAdminTask } from '../../api/admin'
+import { getAdminTasks, createTask, updateAdminTask, deleteAdminTask, reviewTask } from '../../api/admin'
 import type { RecycleTask } from '../../types'
 
 const tasks = ref<RecycleTask[]>([])
@@ -82,14 +101,21 @@ const keyword = ref('')
 const statusTypeMap: Record<number, { label: string; type: string }> = {
   0: { label: '待回收', type: 'warning' },
   1: { label: '已上门', type: 'primary' },
-  2: { label: '已完成', type: 'success' },
-  3: { label: '已失败', type: 'danger' },
+  2: { label: '待审核(完成)', type: 'success' },
+  3: { label: '待审核(失败)', type: 'danger' },
+  4: { label: '审核成功', type: 'success' },
+  5: { label: '审核失败', type: 'danger' },
 }
 
 const dialogVisible = ref(false)
 const editId = ref<number | null>(null)
 const submitting = ref(false)
 const form = ref<Partial<RecycleTask>>({})
+
+const reviewDialogVisible = ref(false)
+const reviewingTask = ref<RecycleTask | null>(null)
+const reviewRemark = ref('')
+const reviewLoading = ref(false)
 
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
 function debouncedFetch() {
@@ -143,6 +169,27 @@ async function handleDelete(id: number) {
   await deleteAdminTask(id)
   ElMessage.success('删除成功')
   fetchTasks()
+}
+
+function showReview(row: RecycleTask) {
+  reviewingTask.value = row
+  reviewRemark.value = ''
+  reviewDialogVisible.value = true
+}
+
+async function submitReview(approved: boolean) {
+  if (!reviewingTask.value) return
+  reviewLoading.value = true
+  try {
+    await reviewTask(reviewingTask.value.id, approved, reviewRemark.value || undefined)
+    ElMessage.success(approved ? '审核通过' : '已驳回')
+    reviewDialogVisible.value = false
+    fetchTasks()
+  } catch (e: any) {
+    ElMessage.error(e.response?.data?.message || '审核失败')
+  } finally {
+    reviewLoading.value = false
+  }
 }
 
 onMounted(fetchTasks)

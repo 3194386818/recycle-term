@@ -64,3 +64,7 @@ export function getAreaStats() {
 export function getLogs(params: { page?: number; size?: number }) {
   return adminApi.get<ApiResult<PageResult<OperationLog>>>('/logs', { params })
 }
+
+export function reviewTask(id: number, approved: boolean, reviewRemark?: string) {
+  return adminApi.patch<ApiResult<RecycleTask>>(`/tasks/${id}/review`, null, { params: { approved, reviewRemark } })
+}

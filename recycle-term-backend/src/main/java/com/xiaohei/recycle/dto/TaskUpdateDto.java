@@ -8,4 +8,5 @@ public class TaskUpdateDto {
     private Boolean completed;
     private Integer status;
     private String remark;
+    private String failReason;
 }

@@ -73,6 +73,15 @@ public class RecycleTask {
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
 
+    @Column(name = "fail_reason", length = 500)
+    private String failReason;
+
+    @Column(name = "review_remark", length = 500)
+    private String reviewRemark;
+
+    @Column(name = "reviewer_id")
+    private Long reviewerId;
+
     @Column(length = 500)
     private String remark;
 

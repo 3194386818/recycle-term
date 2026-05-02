@@ -45,8 +45,15 @@ public class TaskController {
     }
 
     @PatchMapping("/{id}/status")
-    public Result<RecycleTask> updateStatus(@PathVariable Long id, @RequestParam Integer status) {
-        return Result.ok(taskService.updateStatus(id, status));
+    public Result<RecycleTask> updateStatus(@PathVariable Long id, @RequestParam Integer status,
+                                            @RequestParam(required = false) String failReason) {
+        return Result.ok(taskService.updateStatus(id, status, failReason));
+    }
+
+    @PatchMapping("/{id}/review")
+    public Result<RecycleTask> review(@PathVariable Long id, @RequestParam boolean approved,
+                                      @RequestParam(required = false) String reviewRemark) {
+        return Result.ok(taskService.review(id, approved, reviewRemark, null));
     }
 
     @DeleteMapping("/{id}")

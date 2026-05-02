@@ -70,11 +70,21 @@ public class RecycleTaskService {
             task.setCompletedAt(dto.getCompleted() ? LocalDateTime.now() : null);
         }
         if (dto.getStatus() != null) {
+            validateTransition(task.getStatus(), dto.getStatus());
             task.setStatus(dto.getStatus());
             if (dto.getStatus() == 2) {
                 task.setCompleted(true);
                 task.setCompletedAt(LocalDateTime.now());
             }
+            if (dto.getStatus() == 0) {
+                task.setCompleted(false);
+                task.setCompletedAt(null);
+                task.setFailReason(null);
+                task.setReviewRemark(null);
+            }
+        }
+        if (dto.getFailReason() != null) {
+            task.setFailReason(dto.getFailReason());
         }
         if (dto.getRemark() != null) {
             task.setRemark(dto.getRemark());
@@ -83,22 +93,77 @@ public class RecycleTaskService {
     }
 
     @Transactional
-    public RecycleTask updateStatus(Long id, Integer status) {
+    public RecycleTask updateStatus(Long id, Integer status, String failReason) {
         RecycleTask task = getById(id);
+        validateTransition(task.getStatus(), status);
         task.setStatus(status);
+        if (status == 1) {
+            task.setNeedVisit(true);
+        }
         if (status == 2) {
             task.setCompleted(true);
             task.setCompletedAt(LocalDateTime.now());
-        } else if (status == 0) {
+        }
+        if (status == 3) {
+            task.setFailReason(failReason);
+        }
+        if (status == 0) {
             task.setCompleted(false);
             task.setCompletedAt(null);
+            task.setFailReason(null);
+            task.setReviewRemark(null);
         }
         return taskRepository.save(task);
     }
 
+    @Transactional
+    public RecycleTask review(Long id, boolean approved, String reviewRemark, Long reviewerId) {
+        RecycleTask task = getById(id);
+        if (task.getStatus() != 2 && task.getStatus() != 3) {
+            throw new RuntimeException("当前状态不允许审核，只有已完成/已失败状态可以审核");
+        }
+        if (approved) {
+            task.setStatus(4);
+            task.setCompleted(true);
+        } else {
+            task.setStatus(5);
+            task.setCompleted(false);
+            task.setCompletedAt(null);
+        }
+        task.setReviewRemark(reviewRemark);
+        task.setReviewerId(reviewerId);
+        return taskRepository.save(task);
+    }
+
+    private void validateTransition(Integer from, Integer to) {
+        boolean valid = switch (from) {
+            case 0 -> to == 1 || to == 3;
+            case 1 -> to == 2 || to == 3;
+            case 2 -> to == 4 || to == 5;
+            case 3 -> to == 4 || to == 5;
+            case 5 -> to == 0;
+            default -> false;
+        };
+        if (!valid) {
+            throw new RuntimeException("不允许从" + statusLabel(from) + "切换到" + statusLabel(to));
+        }
+    }
+
+    private String statusLabel(int status) {
+        return switch (status) {
+            case 0 -> "待回收";
+            case 1 -> "已上门";
+            case 2 -> "已完成";
+            case 3 -> "已失败";
+            case 4 -> "审核成功";
+            case 5 -> "审核失败";
+            default -> "未知";
+        };
+    }
+
     public StatsDto getStats() {
         long total = taskRepository.count();
-        long completed = taskRepository.count((root, query, cb) -> cb.equal(root.get("status"), 2));
+        long completed = taskRepository.count((root, query, cb) -> cb.equal(root.get("status"), 4));
         long pending = taskRepository.count((root, query, cb) -> cb.equal(root.get("status"), 0));
         long needVisit = taskRepository.count((root, query, cb) -> cb.equal(root.get("needVisit"), true));
         long failed = taskRepository.count((root, query, cb) -> cb.equal(root.get("status"), 3));

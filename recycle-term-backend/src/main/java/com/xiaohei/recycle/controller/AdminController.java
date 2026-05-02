@@ -6,6 +6,7 @@ import com.xiaohei.recycle.dto.TaskCreateDto;
 import com.xiaohei.recycle.entity.OperationLog;
 import com.xiaohei.recycle.entity.RecycleTask;
 import com.xiaohei.recycle.service.AdminService;
+import com.xiaohei.recycle.service.RecycleTaskService;
 import com.xiaohei.recycle.service.StatsService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,7 @@ public class AdminController {
 
     private final AdminService adminService;
     private final StatsService statsService;
+    private final RecycleTaskService taskService;
 
     @PostMapping("/login")
     public Result<Map<String, Object>> login(@RequestBody LoginRequest request, HttpServletRequest req) {
@@ -104,6 +106,19 @@ public class AdminController {
     ) {
         PageRequest pageable = PageRequest.of(page, size);
         return Result.ok(adminService.getLogs(pageable));
+    }
+
+    @PatchMapping("/tasks/{id}/review")
+    public Result<RecycleTask> review(@PathVariable Long id, @RequestParam boolean approved,
+                                      @RequestParam(required = false) String reviewRemark,
+                                      HttpServletRequest req) {
+        Long adminId = (Long) req.getAttribute("adminId");
+        String username = (String) req.getAttribute("adminUsername");
+        RecycleTask task = taskService.review(id, approved, reviewRemark, adminId);
+        adminService.log(adminId, username, "审核任务",
+                "审核任务 ID=" + id + " " + (approved ? "通过" : "驳回") + " " + (reviewRemark != null ? reviewRemark : ""),
+                getClientIp(req));
+        return Result.ok(approved ? "审核通过" : "已驳回", task);
     }
 
     private String getClientIp(HttpServletRequest request) {
