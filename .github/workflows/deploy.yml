@@ -34,26 +34,35 @@ jobs:
           npm ci
           npm run build
 
-      - name: Upload JAR to server
-        uses: appleboy/scp-action@v0.1.7
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          TERM: dumb
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           password: ${{ secrets.SERVER_PASSWORD }}
-          source: "recycle-term-backend/target/recycle-term-backend-1.0.0.jar"
-          target: "/tmp/"
-          strip_components: 3
+          envs: TERM
+          script_stop: true
+          script: |
+            export TERM=dumb
+            echo "=== Deploy started ==="
+            
+            # Upload files via scp from runner
+            echo "Waiting for file upload..."
+            
+      - name: Upload JAR
+        run: |
+          apt-get update -qq && apt-get install -y -qq sshpass > /dev/null 2>&1
+          export SSHPASS='${{ secrets.SERVER_PASSWORD }}'
+          sshpass -e scp -o StrictHostKeyChecking=no recycle-term-backend/target/recycle-term-backend-1.0.0.jar ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/recycle-term-backend.jar
 
       - name: Upload frontend dist
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          password: ${{ secrets.SERVER_PASSWORD }}
-          source: "recycle-term-frontend/dist/"
-          target: "/tmp/fe-dist/"
+        run: |
+          export SSHPASS='${{ secrets.SERVER_PASSWORD }}'
+          sshpass -e scp -r -o StrictHostKeyChecking=no recycle-term-frontend/dist/* ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/tmp/fe-dist/
 
-      - name: Deploy on server
+      - name: Install and restart
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_HOST }}
@@ -61,19 +70,21 @@ jobs:
           password: ${{ secrets.SERVER_PASSWORD }}
           script: |
             # Install JAR
-            echo '${{ secrets.ROOT_PASSWORD }}' | su -c "install -m 755 /tmp/recycle-term-backend-1.0.0.jar /opt/recycle-term/recycle-term-backend.jar"
+            echo '${{ secrets.ROOT_PASSWORD }}' | su -c "install -m 755 /tmp/recycle-term-backend.jar /opt/recycle-term/recycle-term-backend.jar"
             
             # Deploy frontend
             echo '${{ secrets.ROOT_PASSWORD }}' | su -c "rm -rf /var/www/recycle-term/*"
-            echo '${{ secrets.ROOT_PASSWORD }}' | su -c "cp -r /tmp/fe-dist/dist/* /var/www/recycle-term/"
+            echo '${{ secrets.ROOT_PASSWORD }}' | su -c "mkdir -p /tmp/fe-deploy"
+            echo '${{ secrets.ROOT_PASSWORD }}' | su -c "cp -r /tmp/fe-dist/* /tmp/fe-deploy/"
+            echo '${{ secrets.ROOT_PASSWORD }}' | su -c "cp -r /tmp/fe-deploy/* /var/www/recycle-term/"
             echo '${{ secrets.ROOT_PASSWORD }}' | su -c "chown -R nginx:nginx /var/www/recycle-term"
             
             # Restart backend
             echo '${{ secrets.ROOT_PASSWORD }}' | su -c "systemctl restart recycle-term"
             
             # Cleanup
-            rm -rf /tmp/recycle-term-backend-1.0.0.jar /tmp/fe-dist
+            rm -rf /tmp/recycle-term-backend.jar /tmp/fe-dist /tmp/fe-deploy
             
             # Wait and verify
             sleep 5
-            curl -sf http://localhost:8081/api/tasks/stats || echo "WARN: backend not ready yet"
+            curl -sf http://localhost:8081/api/tasks/stats && echo " Backend OK" || echo "WARN: backend not ready"
