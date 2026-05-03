@@ -85,6 +85,15 @@ public class AdminController {
         return Result.ok("删除成功", null);
     }
 
+    @DeleteMapping("/tasks/batch")
+    public Result<Void> batchDeleteTasks(@RequestBody List<Long> ids, HttpServletRequest req) {
+        Long adminId = (Long) req.getAttribute("adminId");
+        String username = (String) req.getAttribute("adminUsername");
+        adminService.batchDeleteTasks(ids);
+        adminService.log(adminId, username, "批量删除", "批量删除 " + ids.size() + " 条任务: " + ids, getClientIp(req));
+        return Result.ok("批量删除成功，共 " + ids.size() + " 条", null);
+    }
+
     @GetMapping("/stats/daily")
     public Result<List<Map<String, Object>>> dailyStats(@RequestParam(defaultValue = "30") int days) {
         return Result.ok(statsService.getDailyStats(days));

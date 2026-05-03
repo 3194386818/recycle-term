@@ -49,7 +49,7 @@ public class RecycleTask {
     @Column(name = "fttr_count")
     private Integer fttrCount;
 
-    @Column(name = "access_room", length = 100)
+    @Column(name = "access_room", length = 255)
     private String accessRoom;
 
     @Column(length = 50)

@@ -108,6 +108,13 @@ public class AdminService {
         taskRepository.deleteById(id);
     }
 
+    @Transactional
+    public void batchDeleteTasks(List<Long> ids) {
+        for (Long id : ids) {
+            taskRepository.deleteById(id);
+        }
+    }
+
     public void log(Long adminId, String adminUsername, String action, String detail, String ip) {
         OperationLog log = new OperationLog();
         log.setAdminId(adminId);

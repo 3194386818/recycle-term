@@ -6,10 +6,18 @@
           <el-input v-model="keyword" placeholder="搜索号码、姓名、地址..." clearable style="width:300px" @input="debouncedFetch">
             <template #prefix><el-icon><Search /></el-icon></template>
           </el-input>
-          <el-button type="primary" @click="showAdd">添加任务</el-button>
+          <div class="header-btns">
+            <el-popconfirm v-if="selectedIds.length > 0" :title="'确定删除选中的 ' + selectedIds.length + ' 个任务？'" @confirm="handleBatchDelete">
+              <template #reference>
+                <el-button type="danger">批量删除 ({{ selectedIds.length }})</el-button>
+              </template>
+            </el-popconfirm>
+            <el-button type="primary" @click="showAdd">添加任务</el-button>
+          </div>
         </div>
       </template>
-      <el-table :data="tasks" v-loading="loading" stripe>
+      <el-table :data="tasks" v-loading="loading" stripe @selection-change="handleSelectionChange">
+        <el-table-column type="selection" width="40" />
         <el-table-column label="ID" prop="id" width="60" />
         <el-table-column label="用户" prop="userName" width="100" />
         <el-table-column label="用户号码" prop="phoneNumber" width="120" />
@@ -150,7 +158,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { getAdminTasks, createTask, updateAdminTask, deleteAdminTask, reviewTask, getAdminRecords } from '../../api/admin'
+import { getAdminTasks, createTask, updateAdminTask, deleteAdminTask, reviewTask, getAdminRecords, batchDeleteAdminTasks } from '../../api/admin'
 import { statusTypeMap } from '../../constants'
 import type { RecycleTask } from '../../types'
 
@@ -174,6 +182,26 @@ const reviewLoading = ref(false)
 const detailVisible = ref(false)
 const detailTask = ref<RecycleTask | null>(null)
 const detailRecords = ref<any[]>([])
+
+const selectedIds = ref<number[]>([])
+
+function handleSelectionChange(rows: RecycleTask[]) {
+  selectedIds.value = rows.map((r: RecycleTask) => r.id)
+}
+
+async function handleBatchDelete() {
+  loading.value = true
+  try {
+    await batchDeleteAdminTasks(selectedIds.value)
+    ElMessage.success(`已删除 ${selectedIds.value.length} 个任务`)
+    selectedIds.value = []
+    fetchTasks()
+  } catch (e: any) {
+    ElMessage.error(e.response?.data?.message || '批量删除失败')
+  } finally {
+    loading.value = false
+  }
+}
 
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
 function debouncedFetch() {

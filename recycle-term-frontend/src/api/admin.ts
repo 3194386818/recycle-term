@@ -49,6 +49,10 @@ export function deleteAdminTask(id: number) {
   return adminApi.delete<ApiResult<void>>(`/tasks/${id}`)
 }
 
+export function batchDeleteAdminTasks(ids: number[]) {
+  return adminApi.delete<ApiResult<void>>('/tasks/batch', { data: ids })
+}
+
 export function getDailyStats(days?: number) {
   return adminApi.get<ApiResult<Array<{ date: string; completed: number; scanned: number }>>>('/stats/daily', { params: { days } })
 }
