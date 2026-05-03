@@ -22,11 +22,10 @@
             <el-tag :type="statusTypeMap[row.status]?.type || 'info'" size="small">{{ statusTypeMap[row.status]?.label || '未知' }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="280" fixed="right">
+        <el-table-column label="操作" width="220" fixed="right">
           <template #default="{ row }">
             <el-button size="small" @click="showDetail(row)">查看</el-button>
             <el-button v-if="row.status === 2 || row.status === 3" size="small" type="warning" @click="showReview(row)">审核</el-button>
-            <el-button v-if="row.status === 4" size="small" type="success" @click="handleArchive(row.id)">归档</el-button>
             <el-button size="small" type="primary" @click="showEdit(row)">编辑</el-button>
             <el-popconfirm title="确定删除？" @confirm="handleDelete(row.id)">
               <template #reference>
@@ -81,47 +80,68 @@
       <template #footer>
         <el-button @click="reviewDialogVisible = false">取消</el-button>
         <el-button type="danger" :loading="reviewLoading" @click="submitReview(false)">驳回</el-button>
-        <el-button type="success" :loading="reviewLoading" @click="submitReview(true)">通过</el-button>
+        <el-button type="success" :loading="reviewLoading" @click="submitReview(true)">归档</el-button>
       </template>
     </el-dialog>
 
     <!-- Detail dialog -->
-    <el-dialog v-model="detailVisible" title="任务详情" width="700px" destroy-on-close>
+    <el-dialog v-model="detailVisible" title="任务详情" width="800px" destroy-on-close>
       <div v-if="detailTask">
-        <el-descriptions :column="2" border size="small">
-          <el-descriptions-item label="ID">{{ detailTask.id }}</el-descriptions-item>
-          <el-descriptions-item label="产品号">{{ detailTask.productId }}</el-descriptions-item>
-          <el-descriptions-item label="用户号码">{{ detailTask.phoneNumber }}</el-descriptions-item>
-          <el-descriptions-item label="用户名称">{{ detailTask.userName }}</el-descriptions-item>
-          <el-descriptions-item label="用户地址" :span="2">{{ detailTask.userAddress }}</el-descriptions-item>
-          <el-descriptions-item label="区域">{{ detailTask.area }}</el-descriptions-item>
-          <el-descriptions-item label="工程师">{{ detailTask.engineerName }} ({{ detailTask.engineerPhone }})</el-descriptions-item>
-          <el-descriptions-item label="接入间">{{ detailTask.accessRoom || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="分类">{{ detailTask.category || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="发展部门">{{ detailTask.devDept || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="发展员工">{{ detailTask.devPerson || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="应回收">{{ detailTask.expectedCount || 0 }}</el-descriptions-item>
-          <el-descriptions-item label="FTTR数量">{{ detailTask.fttrCount || 0 }}</el-descriptions-item>
-          <el-descriptions-item label="状态">
-            <el-tag :type="statusTypeMap[detailTask.status]?.type" size="small">{{ statusTypeMap[detailTask.status]?.label }}</el-tag>
-          </el-descriptions-item>
-          <el-descriptions-item label="是否上门">{{ detailTask.needVisit ? '是' : '否' }}</el-descriptions-item>
-          <el-descriptions-item label="终端串码" :span="2">{{ detailTask.terminals || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="失败原因" :span="2" v-if="detailTask.failReason">
-            <el-tag type="danger">{{ detailTask.failReason }}</el-tag>
-          </el-descriptions-item>
-          <el-descriptions-item label="审核备注" :span="2" v-if="detailTask.reviewRemark">{{ detailTask.reviewRemark }}</el-descriptions-item>
-          <el-descriptions-item label="备注" :span="2">{{ detailTask.remark || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="完成时间">{{ detailTask.completedAt || '-' }}</el-descriptions-item>
-          <el-descriptions-item label="创建时间">{{ detailTask.createdAt }}</el-descriptions-item>
-        </el-descriptions>
-        <h4 style="margin:16px 0 8px">已扫描串码 ({{ detailRecords.length }})</h4>
-        <el-table :data="detailRecords" stripe size="small" max-height="200">
-          <el-table-column label="序号" type="index" width="50" />
-          <el-table-column label="终端串码" prop="serialNumber" />
-          <el-table-column label="扫描时间" prop="scannedAt" width="160" />
-        </el-table>
-        <el-empty v-if="detailRecords.length === 0" description="暂无扫描记录" :image-size="60" />
+        <!-- Status Steps -->
+        <el-steps :active="statusStepIndex(detailTask.status)" finish-status="success" align-center style="margin-bottom:24px">
+          <el-step title="待回收" />
+          <el-step title="已上门" />
+          <el-step :title="detailTask.status === 3 ? '已失败' : '已完成'" />
+          <el-step :title="detailTask.status === 5 ? '审核失败' : '已归档'" />
+        </el-steps>
+
+        <el-tabs type="border-card">
+          <el-tab-pane label="用户信息">
+            <el-descriptions :column="2" border size="small">
+              <el-descriptions-item label="用户名称">{{ detailTask.userName }}</el-descriptions-item>
+              <el-descriptions-item label="用户号码">{{ detailTask.phoneNumber }}</el-descriptions-item>
+              <el-descriptions-item label="产品号">{{ detailTask.productId || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="区域">{{ detailTask.area || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="用户地址" :span="2">{{ detailTask.userAddress || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="工程师">{{ detailTask.engineerName || '-' }} ({{ detailTask.engineerPhone || '-' }})</el-descriptions-item>
+              <el-descriptions-item label="分类">{{ detailTask.category || '-' }}</el-descriptions-item>
+            </el-descriptions>
+          </el-tab-pane>
+
+          <el-tab-pane label="终端信息">
+            <el-descriptions :column="2" border size="small">
+              <el-descriptions-item label="应回收数量">{{ detailTask.expectedCount || 0 }}</el-descriptions-item>
+              <el-descriptions-item label="FTTR主光猫">{{ detailTask.fttrCount || 0 }}</el-descriptions-item>
+              <el-descriptions-item label="接入间">{{ detailTask.accessRoom || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="发展部门">{{ detailTask.devDept || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="发展员工">{{ detailTask.devPerson || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="应回收终端" :span="2">{{ detailTask.terminals || '-' }}</el-descriptions-item>
+            </el-descriptions>
+            <h4 style="margin:16px 0 8px">已扫描串码 ({{ detailRecords.length }})</h4>
+            <el-table :data="detailRecords" stripe size="small" max-height="200">
+              <el-table-column label="序号" type="index" width="50" />
+              <el-table-column label="终端串码" prop="serialNumber" />
+              <el-table-column label="扫描时间" prop="scannedAt" width="160" />
+            </el-table>
+            <el-empty v-if="detailRecords.length === 0" description="暂无扫描记录" :image-size="60" />
+          </el-tab-pane>
+
+          <el-tab-pane label="状态与审核">
+            <el-descriptions :column="2" border size="small">
+              <el-descriptions-item label="当前状态">
+                <el-tag :type="statusTypeMap[detailTask.status]?.type" size="small">{{ statusTypeMap[detailTask.status]?.label }}</el-tag>
+              </el-descriptions-item>
+              <el-descriptions-item label="是否上门">{{ detailTask.needVisit ? '是' : '否' }}</el-descriptions-item>
+              <el-descriptions-item label="完成时间">{{ detailTask.completedAt || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="创建时间">{{ detailTask.createdAt }}</el-descriptions-item>
+              <el-descriptions-item label="失败原因" :span="2" v-if="detailTask.failReason">
+                <el-tag type="danger">{{ detailTask.failReason }}</el-tag>
+              </el-descriptions-item>
+              <el-descriptions-item label="审核备注" :span="2" v-if="detailTask.reviewRemark">{{ detailTask.reviewRemark }}</el-descriptions-item>
+              <el-descriptions-item label="备注" :span="2">{{ detailTask.remark || '-' }}</el-descriptions-item>
+            </el-descriptions>
+          </el-tab-pane>
+        </el-tabs>
       </div>
     </el-dialog>
   </div>
@@ -130,7 +150,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { getAdminTasks, createTask, updateAdminTask, deleteAdminTask, reviewTask, archiveAdminTask, getAdminRecords } from '../../api/admin'
+import { getAdminTasks, createTask, updateAdminTask, deleteAdminTask, reviewTask, getAdminRecords } from '../../api/admin'
 import type { RecycleTask } from '../../types'
 
 const tasks = ref<RecycleTask[]>([])
@@ -218,10 +238,9 @@ async function handleDelete(id: number) {
   fetchTasks()
 }
 
-async function handleArchive(id: number) {
-  await archiveAdminTask(id)
-  ElMessage.success('已归档')
-  fetchTasks()
+function statusStepIndex(status: number): number {
+  const map: Record<number, number> = { 0: 0, 1: 1, 2: 2, 3: 2, 4: 3, 5: 3, 6: 3 }
+  return map[status] ?? 0
 }
 
 async function showDetail(row: RecycleTask) {
@@ -246,7 +265,7 @@ async function submitReview(approved: boolean) {
   reviewLoading.value = true
   try {
     await reviewTask(reviewingTask.value.id, approved, reviewRemark.value || undefined)
-    ElMessage.success(approved ? '审核通过' : '已驳回')
+    ElMessage.success(approved ? '已归档' : '已驳回')
     reviewDialogVisible.value = false
     fetchTasks()
   } catch (e: any) {

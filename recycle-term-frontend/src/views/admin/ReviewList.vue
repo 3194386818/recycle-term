@@ -86,7 +86,7 @@
       <template #footer>
         <el-button @click="reviewDialogVisible = false">取消</el-button>
         <el-button type="danger" :loading="reviewLoading" @click="submitReview(false)">驳回</el-button>
-        <el-button type="success" :loading="reviewLoading" @click="submitReview(true)">通过</el-button>
+        <el-button type="success" :loading="reviewLoading" @click="submitReview(true)">归档</el-button>
       </template>
     </el-dialog>
   </div>

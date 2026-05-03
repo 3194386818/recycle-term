@@ -56,10 +56,6 @@ export function deleteRecord(id: number) {
   return api.delete<ApiResult<void>>(`/records/${id}`)
 }
 
-export function archiveTask(id: number) {
-  return api.patch<ApiResult<RecycleTask>>(`/tasks/${id}/archive`)
-}
-
 // Import
 export function importExcel(file: File) {
   const formData = new FormData()

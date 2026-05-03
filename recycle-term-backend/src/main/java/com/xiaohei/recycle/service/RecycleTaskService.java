@@ -128,7 +128,7 @@ public class RecycleTaskService {
             throw new RuntimeException("当前状态不允许审核，只有已完成/已失败状态可以审核");
         }
         if (approved) {
-            task.setStatus(4);
+            task.setStatus(6);
             task.setCompleted(true);
         } else {
             task.setStatus(5);
@@ -144,9 +144,8 @@ public class RecycleTaskService {
         boolean valid = switch (from) {
             case 0 -> to == 1 || to == 3;
             case 1 -> to == 2 || to == 3;
-            case 2 -> to == 4 || to == 5;
-            case 3 -> to == 4 || to == 5;
-            case 4 -> to == 6;
+            case 2 -> to == 6 || to == 5;
+            case 3 -> to == 6 || to == 5;
             case 5 -> to == 0;
             default -> false;
         };
@@ -180,16 +179,6 @@ public class RecycleTaskService {
             cb.equal(root.get("status"), 3)
         ));
         return new StatsDto(total, completed, pending, needVisit, failed, totalScanned, pendingReview);
-    }
-
-    @Transactional
-    public RecycleTask archive(Long id) {
-        RecycleTask task = getById(id);
-        if (task.getStatus() != 4) {
-            throw new RuntimeException("只有审核成功的任务才能归档");
-        }
-        task.setStatus(6);
-        return taskRepository.save(task);
     }
 
     @Transactional

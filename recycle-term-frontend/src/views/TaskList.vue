@@ -36,14 +36,12 @@
             <el-tag :type="statusTypeMap[row.status]?.type || 'info'" size="small">{{ statusTypeMap[row.status]?.label || '未知' }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" :width="isMobile ? 140 : 260" fixed="right">
+        <el-table-column label="操作" :width="isMobile ? 120 : 200" fixed="right">
           <template #default="{ row }">
             <el-button size="small" @click.stop="copyProduct(row.productId)">复制产品号</el-button>
-            <el-button size="small" type="primary" @click.stop="$router.push(`/scan/${row.id}`)">
-              <el-icon><Camera /></el-icon><span class="btn-text">扫码</span>
-            </el-button>
-            <el-dropdown trigger="click" @command="(cmd: number) => handleStatusChange(row, cmd)" @click.stop>
-              <el-button size="small" type="success">状态</el-button>
+            <el-button size="small" type="primary" @click.stop="goDetail(row)">查看详细</el-button>
+            <el-dropdown v-if="row.status < 2" trigger="click" @command="(cmd: number) => handleStatusChange(row, cmd)" @click.stop>
+              <el-button size="small" type="success">操作</el-button>
               <template #dropdown>
                 <el-dropdown-menu>
                   <template v-if="row.status === 0">
@@ -53,9 +51,6 @@
                   <template v-else-if="row.status === 1">
                     <el-dropdown-item :command="2">已完成</el-dropdown-item>
                     <el-dropdown-item :command="3">已失败</el-dropdown-item>
-                  </template>
-                  <template v-else>
-                    <el-dropdown-item disabled>无可用操作</el-dropdown-item>
                   </template>
                 </el-dropdown-menu>
               </template>
@@ -96,7 +91,8 @@ const page = ref(0)
 const size = ref(50)
 const total = ref(0)
 const keyword = ref('')
-const activeFilter = ref<number | '全部'>('全部')
+const savedFilter = sessionStorage.getItem('taskFilter')
+const activeFilter = ref<number | '全部'>(savedFilter !== null ? (savedFilter === '全部' ? '全部' : Number(savedFilter)) : '全部')
 
 const statusTypeMap: Record<number, { label: string; type: string }> = {
   0: { label: '待回收', type: 'warning' },
@@ -125,6 +121,7 @@ function debouncedFetch() {
 
 function setFilter(key: number | '全部') {
   activeFilter.value = key
+  sessionStorage.setItem('taskFilter', String(key))
   page.value = 0
   keyword.value = ''
   fetchTasks()

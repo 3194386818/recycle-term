@@ -57,11 +57,6 @@ public class TaskController {
         return Result.ok(taskService.review(id, approved, reviewRemark, null));
     }
 
-    @PatchMapping("/{id}/archive")
-    public Result<RecycleTask> archive(@PathVariable Long id) {
-        return Result.ok(taskService.archive(id));
-    }
-
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable Long id) {
         taskService.deleteById(id);
