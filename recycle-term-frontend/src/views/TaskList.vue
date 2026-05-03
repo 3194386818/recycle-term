@@ -36,25 +36,29 @@
             <el-tag :type="statusTypeMap[row.status]?.type || 'info'" size="small">{{ statusTypeMap[row.status]?.label || '未知' }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" :width="isMobile ? 120 : 200" fixed="right">
+        <el-table-column label="操作" :width="isMobile ? 130 : 240" fixed="right">
           <template #default="{ row }">
-            <el-button size="small" @click.stop="copyProduct(row.productId)">复制产品号</el-button>
-            <el-button size="small" type="primary" @click.stop="goDetail(row)">查看详细</el-button>
-            <el-dropdown v-if="row.status < 2" trigger="click" @command="(cmd: number) => handleStatusChange(row, cmd)" @click.stop>
-              <el-button size="small" type="success">操作</el-button>
-              <template #dropdown>
-                <el-dropdown-menu>
-                  <template v-if="row.status === 0">
-                    <el-dropdown-item :command="1">已上门</el-dropdown-item>
-                    <el-dropdown-item :command="3">已失败</el-dropdown-item>
-                  </template>
-                  <template v-else-if="row.status === 1">
-                    <el-dropdown-item :command="2">已完成</el-dropdown-item>
-                    <el-dropdown-item :command="3">已失败</el-dropdown-item>
-                  </template>
-                </el-dropdown-menu>
-              </template>
-            </el-dropdown>
+            <el-button-group>
+              <el-button size="small" @click.stop="copyProduct(row.productId)">复制</el-button>
+              <el-button size="small" type="primary" @click.stop="goDetail(row)">详情</el-button>
+              <el-dropdown v-if="row.status < 2" trigger="click" @command="(cmd: number) => handleStatusChange(row, cmd)" @click.stop>
+                <el-button size="small" type="success">
+                  流转<el-icon class="el-icon--right"><ArrowDown /></el-icon>
+                </el-button>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <template v-if="row.status === 0">
+                      <el-dropdown-item :command="1">已上门</el-dropdown-item>
+                      <el-dropdown-item :command="3">已失败</el-dropdown-item>
+                    </template>
+                    <template v-else-if="row.status === 1">
+                      <el-dropdown-item :command="2">已完成</el-dropdown-item>
+                      <el-dropdown-item :command="3">已失败</el-dropdown-item>
+                    </template>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
+            </el-button-group>
           </template>
         </el-table-column>
       </el-table>
@@ -202,7 +206,6 @@ onMounted(() => {
 @media (max-width: 768px) {
   .stat-num { font-size: 24px; }
   .stat-label { font-size: 12px; }
-  .btn-text { display: none; }
   :deep(.hide-mobile) { display: none !important; }
 }
 </style>
