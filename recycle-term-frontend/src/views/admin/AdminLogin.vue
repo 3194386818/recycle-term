@@ -38,6 +38,9 @@ async function handleLogin() {
     if (res.code === 200) {
       localStorage.setItem('admin_token', res.data.token)
       localStorage.setItem('admin_username', res.data.username)
+      localStorage.setItem('auth_token', res.data.token)
+      localStorage.setItem('auth_role', 'admin')
+      localStorage.setItem('auth_phone', form.value.username)
       ElMessage.success('登录成功')
       router.push('/admin/dashboard')
     } else {

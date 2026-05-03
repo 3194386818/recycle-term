@@ -134,6 +134,9 @@ async function fetchTasks() {
     } else if (activeFilter.value !== '全部') {
       params.status = activeFilter.value
     }
+    if (localStorage.getItem('auth_role') === 'engineer') {
+      params.engineerPhone = localStorage.getItem('auth_phone')
+    }
     const { data: res } = await getTasks(params)
     tasks.value = res.data.content
     total.value = res.data.totalElements
