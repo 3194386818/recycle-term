@@ -24,9 +24,13 @@ public class JwtUtil {
     }
 
     public String generateToken(Long adminId, String username) {
+        return generate(adminId, username);
+    }
+
+    public String generate(Long id, String name) {
         return Jwts.builder()
-                .subject(username)
-                .claim("adminId", adminId)
+                .subject(name)
+                .claim("id", id)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + expiration))
                 .signWith(getKey())
@@ -50,6 +54,15 @@ public class JwtUtil {
     public Long getAdminId(String token) {
         Claims claims = getClaims(token);
         return claims.get("adminId", Long.class);
+    }
+
+    public Long getId(String token) {
+        Claims claims = getClaims(token);
+        Long id = claims.get("adminId", Long.class);
+        if (id == null) {
+            id = claims.get("id", Long.class);
+        }
+        return id;
     }
 
     private Claims getClaims(String token) {

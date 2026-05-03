@@ -47,6 +47,10 @@
             <el-icon><Document /></el-icon>
             <template #title>操作日志</template>
           </el-menu-item>
+          <el-menu-item index="/admin/engineers">
+            <el-icon><User /></el-icon>
+            <template #title>账号管理</template>
+          </el-menu-item>
         </el-menu>
         <div class="collapse-btn" @click="isCollapse = !isCollapse">
           <el-icon><Fold v-if="!isCollapse" /><Expand v-else /></el-icon>
