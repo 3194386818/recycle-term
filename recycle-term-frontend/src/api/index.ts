@@ -64,3 +64,11 @@ export function importExcel(file: File) {
     headers: { 'Content-Type': 'multipart/form-data' },
   })
 }
+
+export function previewExcel(file: File) {
+  const formData = new FormData()
+  formData.append('file', file)
+  return api.post<ApiResult<RecycleTask[]>>('/import/excel/preview', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+}

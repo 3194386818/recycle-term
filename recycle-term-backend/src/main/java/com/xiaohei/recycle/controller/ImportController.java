@@ -21,19 +21,31 @@ public class ImportController {
 
     @PostMapping("/excel")
     public Result<List<RecycleTask>> importExcel(@RequestParam("file") MultipartFile file) {
-        if (file.isEmpty()) {
-            return Result.error("请选择文件");
-        }
-        String filename = file.getOriginalFilename();
-        if (filename == null || (!filename.endsWith(".xlsx") && !filename.endsWith(".xls"))) {
-            return Result.error("请上传 Excel 文件");
-        }
+        validateFile(file);
         try {
             List<RecycleTask> tasks = excelImportService.importFromExcel(file);
             return Result.ok("导入成功，共 " + tasks.size() + " 条", tasks);
         } catch (Exception e) {
             return Result.error("导入失败: " + e.getMessage());
         }
+    }
+
+    @PostMapping("/excel/preview")
+    public Result<List<RecycleTask>> previewExcel(@RequestParam("file") MultipartFile file) {
+        validateFile(file);
+        try {
+            List<RecycleTask> tasks = excelImportService.parseExcel(file);
+            return Result.ok("预览解析成功，共 " + tasks.size() + " 条", tasks);
+        } catch (Exception e) {
+            return Result.error("解析失败: " + e.getMessage());
+        }
+    }
+
+    private void validateFile(MultipartFile file) {
+        if (file.isEmpty()) throw new RuntimeException("请选择文件");
+        String filename = file.getOriginalFilename();
+        if (filename == null || (!filename.endsWith(".xlsx") && !filename.endsWith(".xls")))
+            throw new RuntimeException("请上传 Excel 文件");
     }
 
     @PostMapping("/backfill-product-id")
