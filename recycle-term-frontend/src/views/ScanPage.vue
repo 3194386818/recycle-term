@@ -98,6 +98,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { readBarcodesFromImageData, getZXingModule, type ReaderOptions } from 'zxing-wasm/reader'
 import { getTaskById, getTasks, scanTerminals } from '../api'
+import { statusTypeMap } from '../constants'
 import type { RecycleTask } from '../types'
 
 const route = useRoute()
@@ -111,16 +112,6 @@ const searchKeyword = ref('')
 const taskList = ref<RecycleTask[]>([])
 const cameraError = ref('')
 const scanning = ref(false)
-
-const statusTypeMap: Record<number, { label: string; type: string }> = {
-  0: { label: '待回收', type: 'warning' },
-  1: { label: '已上门', type: 'primary' },
-  2: { label: '待审核', type: 'success' },
-  3: { label: '待审核', type: 'danger' },
-  4: { label: '审核成功', type: 'success' },
-  5: { label: '审核失败', type: 'danger' },
-  6: { label: '已归档', type: 'info' },
-}
 
 const videoRef = ref<HTMLVideoElement | null>(null)
 const canvasRef = ref<HTMLCanvasElement | null>(null)

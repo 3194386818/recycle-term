@@ -5,7 +5,6 @@ import com.xiaohei.recycle.repository.RecycleTaskRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -25,7 +24,7 @@ public class ExcelImportService {
     public List<RecycleTask> importFromExcel(MultipartFile file) throws IOException {
         List<RecycleTask> tasks = new ArrayList<>();
 
-        try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
+        try (Workbook workbook = WorkbookFactory.create(file.getInputStream())) {
             Sheet sheet = workbook.getSheetAt(0);
             if (sheet == null) return tasks;
 
@@ -52,8 +51,9 @@ public class ExcelImportService {
                 task.setExpectedCount(getIntCell(row, 24));
                 task.setFttrCount(getIntCell(row, 25));
 
-                tasks.add(taskRepository.save(task));
+                tasks.add(task);
             }
+            taskRepository.saveAll(tasks);
         }
 
         log.info("Imported {} tasks from Excel", tasks.size());

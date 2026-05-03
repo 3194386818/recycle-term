@@ -34,8 +34,9 @@ public class TerminalRecordService {
             TerminalRecord record = new TerminalRecord();
             record.setTaskId(taskId);
             record.setSerialNumber(sn.trim());
-            records.add(recordRepository.save(record));
+            records.add(record);
         }
+        recordRepository.saveAll(records);
 
         // Check if all terminals scanned, auto-complete
         long scannedCount = recordRepository.findByTaskIdOrderByScannedAtDesc(taskId).size();

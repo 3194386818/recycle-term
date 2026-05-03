@@ -151,6 +151,7 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { getAdminTasks, createTask, updateAdminTask, deleteAdminTask, reviewTask, getAdminRecords } from '../../api/admin'
+import { statusTypeMap } from '../../constants'
 import type { RecycleTask } from '../../types'
 
 const tasks = ref<RecycleTask[]>([])
@@ -159,16 +160,6 @@ const page = ref(0)
 const size = ref(20)
 const total = ref(0)
 const keyword = ref('')
-
-const statusTypeMap: Record<number, { label: string; type: string }> = {
-  0: { label: '待回收', type: 'warning' },
-  1: { label: '已上门', type: 'primary' },
-  2: { label: '待审核(完成)', type: 'success' },
-  3: { label: '待审核(失败)', type: 'danger' },
-  4: { label: '审核成功', type: 'success' },
-  5: { label: '审核失败', type: 'danger' },
-  6: { label: '已归档', type: 'info' },
-}
 
 const dialogVisible = ref(false)
 const editId = ref<number | null>(null)
@@ -233,9 +224,13 @@ async function handleSubmit() {
 }
 
 async function handleDelete(id: number) {
-  await deleteAdminTask(id)
-  ElMessage.success('删除成功')
-  fetchTasks()
+  try {
+    await deleteAdminTask(id)
+    ElMessage.success('删除成功')
+    fetchTasks()
+  } catch (e: any) {
+    ElMessage.error(e.response?.data?.message || '删除失败')
+  }
 }
 
 function statusStepIndex(status: number): number {

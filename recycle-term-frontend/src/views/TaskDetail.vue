@@ -101,9 +101,13 @@ import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getTaskById, updateTaskStatus, getRecordsByTaskId, deleteRecord } from '../api'
 import type { RecycleTask, TerminalRecord } from '../types'
+import { statusTypeMap } from '../constants'
+import { useIsMobile } from '../composables/useIsMobile'
 
 const route = useRoute()
 const taskId = Number(route.params.id)
+const isMobile = useIsMobile()
+const descColumn = computed(() => isMobile.value ? 1 : 2)
 
 const task = ref<RecycleTask | null>(null)
 const records = ref<TerminalRecord[]>([])
@@ -112,20 +116,6 @@ const failDialogVisible = ref(false)
 const failReason = ref('')
 const customFailReason = ref('')
 const statusLoading = ref(false)
-
-const isMobile = ref(window.innerWidth <= 768)
-window.addEventListener('resize', () => { isMobile.value = window.innerWidth <= 768 })
-const descColumn = computed(() => isMobile.value ? 1 : 2)
-
-const statusTypeMap: Record<number, { label: string; type: string }> = {
-  0: { label: '待回收', type: 'warning' },
-  1: { label: '已上门', type: 'primary' },
-  2: { label: '已完成(待审核)', type: 'success' },
-  3: { label: '已失败(待审核)', type: 'danger' },
-  4: { label: '审核成功', type: 'success' },
-  5: { label: '审核失败', type: 'danger' },
-  6: { label: '已归档', type: 'info' },
-}
 
 async function fetchTask() {
   const { data: res } = await getTaskById(taskId)
@@ -182,9 +172,13 @@ async function submitFail() {
 }
 
 async function removeRecord(id: number) {
-  await deleteRecord(id)
-  ElMessage.success('已删除')
-  fetchRecords()
+  try {
+    await deleteRecord(id)
+    ElMessage.success('已删除')
+    fetchRecords()
+  } catch (e: any) {
+    ElMessage.error(e.response?.data?.message || '删除失败')
+  }
 }
 
 onMounted(() => {

@@ -15,6 +15,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import jakarta.annotation.PostConstruct;
 import java.nio.charset.StandardCharsets;
@@ -81,14 +82,15 @@ public class AdminService {
         return taskRepository.save(task);
     }
 
+    @Transactional
     public List<RecycleTask> batchCreateTasks(List<TaskCreateDto> dtos) {
         List<RecycleTask> tasks = new ArrayList<>();
         for (TaskCreateDto dto : dtos) {
             RecycleTask task = new RecycleTask();
             copyDtoToEntity(dto, task);
-            tasks.add(taskRepository.save(task));
+            tasks.add(task);
         }
-        return tasks;
+        return taskRepository.saveAll(tasks);
     }
 
     public RecycleTask updateTask(Long id, TaskCreateDto dto) {
@@ -98,6 +100,7 @@ public class AdminService {
         return taskRepository.save(task);
     }
 
+    @Transactional
     public void deleteTask(Long id) {
         if (!taskRepository.existsById(id)) {
             throw new RuntimeException("任务不存在");

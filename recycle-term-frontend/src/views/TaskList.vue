@@ -79,11 +79,11 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getTasks, getStats, updateTaskStatus } from '../api'
 import type { RecycleTask, Stats } from '../types'
+import { statusTypeMap } from '../constants'
+import { useIsMobile } from '../composables/useIsMobile'
 
 const router = useRouter()
-
-const isMobile = ref(window.innerWidth <= 768)
-window.addEventListener('resize', () => { isMobile.value = window.innerWidth <= 768 })
+const isMobile = useIsMobile()
 
 const tasks = ref<RecycleTask[]>([])
 const loading = ref(false)
@@ -93,16 +93,6 @@ const total = ref(0)
 const keyword = ref('')
 const savedFilter = sessionStorage.getItem('taskFilter')
 const activeFilter = ref<number | '全部'>(savedFilter !== null ? (savedFilter === '全部' ? '全部' : Number(savedFilter)) : '全部')
-
-const statusTypeMap: Record<number, { label: string; type: string }> = {
-  0: { label: '待回收', type: 'warning' },
-  1: { label: '已上门', type: 'primary' },
-  2: { label: '待审核', type: 'success' },
-  3: { label: '待审核', type: 'danger' },
-  4: { label: '审核成功', type: 'success' },
-  5: { label: '审核失败', type: 'danger' },
-  6: { label: '已归档', type: 'info' },
-}
 
 const stats = ref<Stats>({ total: 0, completed: 0, pending: 0, needVisit: 0, failed: 0, totalScanned: 0, pendingReview: 0 })
 
@@ -149,12 +139,16 @@ async function fetchTasks() {
 }
 
 async function fetchStats() {
-  const { data: res } = await getStats()
-  stats.value = res.data
-  statCards.value[0].value = res.data.total
-  statCards.value[1].value = res.data.pending
-  statCards.value[2].value = res.data.pendingReview
-  statCards.value[3].value = res.data.completed
+  try {
+    const { data: res } = await getStats()
+    stats.value = res.data
+    statCards.value[0].value = res.data.total
+    statCards.value[1].value = res.data.pending
+    statCards.value[2].value = res.data.pendingReview
+    statCards.value[3].value = res.data.completed
+  } catch {
+    // silently ignore stats error
+  }
 }
 
 async function handleStatusChange(row: RecycleTask, status: number) {
