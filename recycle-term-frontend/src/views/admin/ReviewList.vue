@@ -151,7 +151,7 @@ async function submitReview(approved: boolean) {
   reviewLoading.value = true
   try {
     await reviewTask(reviewingTask.value.id, approved, reviewRemark.value || undefined)
-    ElMessage.success(approved ? '审核通过' : '已驳回')
+    ElMessage.success(approved ? '已归档' : '已驳回')
     reviewDialogVisible.value = false
     fetchTasks()
   } catch (e: any) {

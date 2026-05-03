@@ -128,7 +128,7 @@ public class AdminController {
         adminService.log(adminId, username, "审核任务",
                 "审核任务 ID=" + id + " " + (approved ? "通过" : "驳回") + " " + (reviewRemark != null ? reviewRemark : ""),
                 getClientIp(req));
-        return Result.ok(approved ? "审核通过" : "已驳回", task);
+        return Result.ok(approved ? "已归档" : "已驳回", task);
     }
 
     private String getClientIp(HttpServletRequest request) {
