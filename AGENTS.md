@@ -1,156 +1,157 @@
 # AGENTS.md — recycle-term
 
-Monorepo for a terminal recycling management system (终端回收管理系统).
-Two sub-projects: `recycle-term-frontend/` (Vue 3 SPA) and `recycle-term-backend/` (Spring Boot REST API).
+Monorepo: 终端回收管理系统. `recycle-term-frontend/` (Vue 3 + TS) + `recycle-term-backend/` (Spring Boot 3.4.5).
 
-## Build / Dev / Lint / Test Commands
+## Build / Dev / Lint / Test
 
-### Frontend (recycle-term-frontend/)
+### Frontend (`recycle-term-frontend/`)
 
 ```bash
-cd recycle-term-frontend
-npm install              # install dependencies
-npm run dev              # dev server on :5173 (proxies /api → :8081)
-npm run build            # type-check with vue-tsc then vite build
+npm install              # install deps
+npm run dev              # dev server :5173, proxies /api → :8081
+npm run build            # vue-tsc type-check + vite build
 npm run preview          # preview production build
 ```
 
-- There is **no linter, formatter, or test runner** configured in the frontend.
-- To add linting, install `eslint` + `@vue/eslint-config-typescript` or add a `vitest` config.
-- Until then, do NOT assume `npm run lint` or `npm test` exist.
+- No linter, formatter, or test runner configured. DO NOT run `npm run lint` or `npm test`.
+- `vue-tsc -b --noEmit` for type-check alone; `vite build` on WSL may fail on native bindings (use `vue-tsc` separately).
 
-### Backend (recycle-term-backend/)
+### Backend (`recycle-term-backend/`)
 
 ```bash
-cd recycle-term-backend
-mvn clean install        # compile + package
-mvn spring-boot:run      # start on :8081
-mvn test                 # run all tests (none exist yet)
+mvn clean package -DskipTests    # compile + JAR
+mvn spring-boot:run              # start :8081
+mvn test                         # no tests exist yet
 ```
 
-- Java 21, Spring Boot 3.4.5, Maven wrapper not included — use system `mvn`.
-- There are **no test classes** currently. When adding tests, place them in `src/test/java/com/xiaohei/recycle/`.
+- Java 21, use system `mvn` (no Maven wrapper).
+- Place new tests in `src/test/java/com/xiaohei/recycle/`.
 
 ### Database
 
-- MySQL 8, database `recycle_term`, charset `utf8mb4`.
-- JPA `ddl-auto: update` creates/alters tables automatically.
-- Schema reference: `recycle-term-backend/src/main/resources/db/schema.sql`.
+- MySQL 8, db `recycle_term`, utf8mb4.
+- `ddl-auto: update` auto-creates/alters tables from JPA entities.
+- Schema reference: `src/main/resources/db/schema.sql` (may be stale, trust JPA entities).
+
+### Deploy (local → server)
+
+```bash
+# Local build
+cd recycle-term-backend && mvn clean package -DskipTests
+cd recycle-term-frontend && npm install && npm run build
+# Upload via paramiko SFTP (JAR → /opt/recycle-term/, dist → /var/www/recycle-term/)
+# Server: install -m 755 JAR && systemctl restart recycle-term
+```
+
+- Server: 43.130.238.145, SSH as `xiaohei`, no sudo (use `su -` for root).
+- Maven 3.9.9 at `/opt/apache-maven-3.9.9/bin/mvn`, Java 21 at `/usr/lib/jvm/java-21-openjdk`.
+- Nginx reverse proxy: `/etc/nginx/conf.d/recycle-term.conf`, SSL at `/etc/nginx/ssl/`.
 
 ## Project Structure
 
 ```
 recycle-term/
 ├── recycle-term-frontend/
-│   ├── src/
-│   │   ├── api/index.ts          # Axios wrapper, all backend calls
-│   │   ├── types/index.ts        # Shared TypeScript interfaces
-│   │   ├── views/                # Vue page components
-│   │   ├── router/index.ts       # Vue Router routes
-│   │   ├── main.ts               # App entry, Element Plus setup
-│   │   └── App.vue               # Root layout
-│   └── vite.config.ts
+│   └── src/
+│       ├── api/index.ts          # Public API calls
+│       ├── api/admin.ts          # Admin API calls (JWT interceptor)
+│       ├── types/index.ts        # All TypeScript interfaces
+│       ├── views/                # Vue pages
+│       │   └── admin/            # Admin pages (JWT guarded)
+│       ├── router/index.ts       # Routes + admin auth guard
+│       ├── main.ts               # Element Plus + icon global registration
+│       └── App.vue               # Header + sidebar layout
 ├── recycle-term-backend/
-│   ├── src/main/java/com/xiaohei/recycle/
-│   │   ├── controller/           # REST controllers (all under /api)
-│   │   ├── service/              # Business logic
-│   │   ├── repository/           # Spring Data JPA repositories
-│   │   ├── entity/               # JPA entities
-│   │   ├── dto/                  # Request/response DTOs
-│   │   └── config/               # CORS, etc.
-│   └── src/main/resources/
-│       ├── application.yml
-│       └── db/schema.sql
-└── data/                         # Sample Excel data files
+│   └── src/main/java/com/xiaohei/recycle/
+│       ├── controller/           # @RestController under /api
+│       ├── service/              # @Service business logic
+│       ├── repository/           # JpaRepository + JpaSpecificationExecutor
+│       ├── entity/               # @Entity JPA classes
+│       ├── dto/                  # Request/response DTOs
+│       └── config/               # CORS, JWT interceptor, WebMvcConfig
+└── data/                         # Sample Excel files
 ```
 
-## Code Style — Frontend (Vue 3 + TypeScript)
+## Code Style — Frontend
 
 ### Vue Components
-- Use `<script setup lang="ts">` — always.
-- Single-file components (`.vue`): template → script → style order.
-- Scoped styles: always use `<style scoped>`.
-- Use Composition API exclusively (no Options API).
+- `<script setup lang="ts">` always. Composition API only.
+- SFC order: template → script → style. Use `<style scoped>`.
+- Imports: `import { ref, onMounted } from 'vue'`, `import type { ... } from '../types'`, API functions from `../api` or `../api/admin`.
+- Element Plus icons registered globally in `main.ts`; use directly as `<Search />`.
+- API responses: `const { data: res } = await getTasks()` (wrapper is `ApiResult<T>`).
+- Naming: PascalCase files, camelCase functions/refs, kebab-case CSS.
+- Debounce search: `setTimeout`/`clearTimeout` pattern (see `TaskList.vue`).
+- Mobile: detect via `window.innerWidth <= 768`, use `class-name="hide-mobile"` for hidden columns.
+- Error handling: `try { await api() } catch (e: any) { ElMessage.error(e.response?.data?.message || 'xxx') }`.
+- **DON'T**: use `window.location.hash` for navigation — use `router.push()` instead.
 
-### Imports
-- Vue ecosystem: `import { ref, onMounted } from 'vue'`
-- Element Plus: import from `element-plus` (e.g., `ElMessage`, `ElMessageBox`).
-- Element Plus icons: imported globally in `main.ts`; use directly as `<Search />`.
-- Types: use `import type { ... }` for type-only imports from `../types`.
-- API calls: import functions from `../api`.
+### Status System
 
-### TypeScript
-- Interfaces for all data shapes live in `src/types/index.ts`.
-- Use explicit typing on `ref<T>()` when type cannot be inferred.
-- API responses are always `ApiResult<T>` — destructure as `const { data: res } = await someApi()`.
-- Use `Partial<T>` for update payloads.
+Status integer → UI label mapping (define in a shared constant, NOT duplicated per component):
 
-### Naming
-- Component files: PascalCase (`TaskList.vue`, `ScanPage.vue`).
-- Functions: camelCase (`fetchTasks`, `toggleComplete`).
-- Reactive refs: camelCase (`const tasks = ref<RecycleTask[]>([])`).
-- CSS classes: kebab-case (`stat-card`, `toolbar-btns`).
+| status | label |
+|--------|-------|
+| 0 | 待回收 |
+| 1 | 已上门 |
+| 2 | 已完成(待审核) |
+| 3 | 已失败(待审核) |
+| 4 | 审核成功 (deprecated, use 6) |
+| 5 | 审核失败 |
+| 6 | 已归档 |
 
-### Patterns
-- Debounce search inputs with `setTimeout`/`clearTimeout` pattern (see `TaskList.vue`).
-- Loading state: use `v-loading` directive with a `ref<boolean>`.
-- Error handling: rely on Axios interceptor or try/catch; show errors with `ElMessage.error()`.
-- Navigation: use `useRouter()` and `$router.push()`.
+### Flow: 0→1→2/3→(review)→6/5→0
 
-### UI Framework
-- Element Plus is the component library — use its components (`el-table`, `el-card`, `el-button`, etc.).
-- Chinese is the UI language; all user-facing strings are in Chinese.
-
-## Code Style — Backend (Spring Boot + Java)
+## Code Style — Backend
 
 ### Architecture
-- Layered: Controller → Service → Repository → Entity.
-- Controllers: `@RestController` with `@RequestMapping("/api/...")`.
-- Services: `@Service` with `@RequiredArgsConstructor` for DI.
-- Repositories: extend `JpaRepository` or `JpaSpecificationExecutor`.
+- Controller → Service → Repository → Entity. Never call repository from controller.
+- `@RequiredArgsConstructor` for DI (no `@Autowired`). `@Data` on entities/DTOs.
+- Response: `Result<T>` via `Result.ok(data)` / `Result.error("msg")`. Messages in Chinese.
+- Error: `throw new RuntimeException("任务不存在")`, catch in controller for validation errors.
 
-### Lombok
-- Use `@Data` on entities and DTOs.
-- Use `@RequiredArgsConstructor` for constructor injection (never `@Autowired`).
-- Use `@AllArgsConstructor` / `@NoArgsConstructor` where needed.
-
-### JPA Entities
-- `@Entity` + `@Table(name = "snake_case")`.
+### JPA
+- `@Entity` + `@Table(name = "snake_case")`. `@Column(name = "snake_case")`.
 - `@Id` + `@GeneratedValue(strategy = GenerationType.IDENTITY)`.
-- Column names: `@Column(name = "snake_case")`.
-- Timestamps: `@CreationTimestamp` / `@UpdateTimestamp` from Hibernate.
+- `@CreationTimestamp` / `@UpdateTimestamp` for timestamps.
+- Use `Specification` for dynamic queries. Pagination: `PageRequest.of(page, size, Sort.by(DESC, "id"))`.
+- Lombok errors from LSP (getter/setter/constructor not found) are **false positives** — Maven build works.
 
-### Response Wrapper
-- All endpoints return `Result<T>` (code, message, data).
-- Success: `Result.ok(data)` or `Result.ok("message", data)`.
-- Error: `Result.error("message")` or `Result.error(code, "message")`.
+### APIs
+- Base: `/api`. Resources: `/tasks`, `/records`, `/import`, `/admin/*`.
+- Pagination: `page` (0-indexed) + `size`. Status filter: `Integer status` or `Boolean pendingReview` (status 2+3).
+- Admin endpoints under `/api/admin/` use JWT via `AdminInterceptor`.
+- `application.yml` has real DB password — **never commit changes to credentials**.
 
-### Naming
-- Packages: lowercase (`com.xiaohei.recycle.controller`).
-- Classes: PascalCase (`RecycleTaskService`, `TerminalRecord`).
-- Methods: camelCase (`getById`, `search`, `deleteById`).
-- DB tables/columns: snake_case.
+## Known Issues / Optimization TODO
 
-### Error Handling
-- Return `Result.error(...)` with Chinese messages for client-facing errors.
-- Use `RuntimeException` for not-found cases (e.g., `orElseThrow(() -> new RuntimeException("任务不存在"))`).
-- Controller-level try/catch for validation (see `ImportController`).
+### High Priority
+- **N+1 queries**: `TerminalRecordService.scan()`, `AdminService.batchCreateTasks()`, `StatsService` daily loop — batch with `saveAll()` / aggregation queries.
+- **Admin delete** (`AdminService.deleteTask`) doesn't cascade-delete `terminal_record` rows.
+- **Excel import** uses `XSSFWorkbook` only (`.xlsx`). Use `WorkbookFactory.create()` for `.xls` support.
+- **Missing DB indexes**: `recycle_task.status`, `recycle_task.completed`, `recycle_task.completed_at`, `terminal_record.scanned_at`, unique `(task_id, serial_number)`.
+- **`open-in-view: true`** anti-pattern — set to `false` and add `@Transactional` to all read services.
 
-### Validation
-- Jakarta Validation (`spring-boot-starter-validation`).
-- Use `@RequestBody` for JSON, `@RequestParam` for query params, `@PathVariable` for URL segments.
+### Medium Priority
+- **Duplicate `statusTypeMap`** in 3+ components — extract to `src/constants/index.ts`.
+- **Memory leak**: `window resize` listeners not removed in `TaskList.vue`/`TaskDetail.vue` — use `onUnmounted(() => window.removeEventListener(...))`.
+- **Missing error handling**: `fetchStats`, `removeRecord`, `handleDelete` lack try/catch.
+- **`admin.ts:22`** uses `window.location.hash` with `createWebHistory` router — use `router.push('/admin/login')`.
+- **`schema.sql`** is stale — missing `fail_reason`, `review_remark`, `reviewer_id`, status range up to 6.
+- **ReviewList fetches status 2+3 separately** — add `pendingReview` param to admin API or merge requests.
 
-## API Conventions
-
-- Base path: `/api`
-- REST resources: `/api/tasks`, `/api/records`, `/api/import`
-- Pagination: `page` (0-indexed) + `size` params → returns `Page<T>`.
-- Sorting: server-side default `Sort.by(DESC, "id")`.
-- Frontend proxy: Vite proxies `/api` to `http://127.0.0.1:8081`.
+### Low Priority
+- No Spring Boot Actuator (`/health` endpoint).
+- HTML `<html lang="en">` should be `zh-CN`.
+- No favicon. Page title is "recycle-term-frontend".
+- `codeable-taskRepository-searchByKeyword` and `findByPhoneNumberLikeOr...` are unused dead code.
+- `OperationLog` table has no retention/cleanup mechanism.
 
 ## Important Notes
 
-- The backend `application.yml` contains a real DB password — do not commit credential changes.
-- CORS is wide open (`*`) — do not tighten without asking.
-- `ddl-auto: update` is active — schema changes happen via JPA, not manual SQL.
+- **Token in `gitToken.txt`**: present in repo (gitignored but check history if exposed). Rotate periodically.
+- **JWT secret**: hardcoded in `application.yml` and `JwtUtil.java` default — should be env var only in production.
+- **Default admin**: `admin`/`admin123` in `AdminService.@PostConstruct` — change in production.
+- **CORS**: wide open (`*`) — don't tighten without discussion.
+- **`ddl-auto: update`** — JPA manages schema, don't run manual `ALTER TABLE` without coordination.
 - No `.cursorrules`, `.cursor/rules/`, or `.github/copilot-instructions.md` exist.
