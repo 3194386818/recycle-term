@@ -9,7 +9,8 @@
           <el-button v-if="task.status === 0" type="primary" @click="changeStatus(1)">已上门</el-button>
           <el-button v-if="task.status === 0 || task.status === 1" type="danger" @click="showFailDialog">已失败</el-button>
           <el-button v-if="task.status === 1" type="success" @click="changeStatus(2)">已完成</el-button>
-          <el-button type="primary" @click="$router.push(`/scan/${task.id}`)">
+          <el-button v-if="task.status === 5" type="warning" @click="changeStatus(0)">重新处理</el-button>
+          <el-button v-if="task.status < 2" type="primary" @click="$router.push(`/scan/${task.id}`)">
             <el-icon><Camera /></el-icon><span class="btn-text">扫码回收</span>
           </el-button>
         </div>
@@ -123,6 +124,7 @@ const statusTypeMap: Record<number, { label: string; type: string }> = {
   3: { label: '已失败(待审核)', type: 'danger' },
   4: { label: '审核成功', type: 'success' },
   5: { label: '审核失败', type: 'danger' },
+  6: { label: '已归档', type: 'info' },
 }
 
 async function fetchTask() {

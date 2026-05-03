@@ -16,6 +16,7 @@ export function getTasks(params: {
   completed?: boolean | null
   needVisit?: boolean | null
   status?: number
+  pendingReview?: boolean
   page?: number
   size?: number
 }) {
@@ -53,6 +54,10 @@ export function scanTerminals(taskId: number, serialNumbers: string[]) {
 
 export function deleteRecord(id: number) {
   return api.delete<ApiResult<void>>(`/records/${id}`)
+}
+
+export function archiveTask(id: number) {
+  return api.patch<ApiResult<RecycleTask>>(`/tasks/${id}/archive`)
 }
 
 // Import

@@ -68,3 +68,11 @@ export function getLogs(params: { page?: number; size?: number }) {
 export function reviewTask(id: number, approved: boolean, reviewRemark?: string) {
   return adminApi.patch<ApiResult<RecycleTask>>(`/tasks/${id}/review`, null, { params: { approved, reviewRemark } })
 }
+
+export function archiveAdminTask(id: number) {
+  return adminApi.patch<ApiResult<RecycleTask>>(`/tasks/${id}/archive`)
+}
+
+export function getAdminRecords(taskId: number) {
+  return adminApi.get<ApiResult<any[]>>(`/records/task/${taskId}`, { baseURL: '/api' })
+}

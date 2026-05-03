@@ -12,4 +12,5 @@ public class StatsDto {
     private long needVisit;
     private long failed;
     private long totalScanned;
+    private long pendingReview;
 }

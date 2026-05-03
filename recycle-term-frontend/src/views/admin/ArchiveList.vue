@@ -92,9 +92,9 @@ function debouncedFetch() {
 async function fetchTasks() {
   loading.value = true
   try {
-    const { data: res } = await getAdminTasks({ keyword: keyword.value, page: page.value, size: size.value })
-    tasks.value = res.data.content.filter((t: RecycleTask) => t.status === 4)
-    total.value = tasks.value.length
+    const { data: res } = await getAdminTasks({ keyword: keyword.value, status: 6, page: page.value, size: size.value })
+    tasks.value = res.data.content
+    total.value = res.data.totalElements
   } finally {
     loading.value = false
   }

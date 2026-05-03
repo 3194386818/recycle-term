@@ -119,6 +119,7 @@ const statusTypeMap: Record<number, { label: string; type: string }> = {
   3: { label: '待审核', type: 'danger' },
   4: { label: '审核成功', type: 'success' },
   5: { label: '审核失败', type: 'danger' },
+  6: { label: '已归档', type: 'info' },
 }
 
 const videoRef = ref<HTMLVideoElement | null>(null)

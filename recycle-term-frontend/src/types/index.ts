@@ -41,6 +41,7 @@ export interface Stats {
   needVisit: number
   failed: number
   totalScanned: number
+  pendingReview: number
 }
 
 export interface PageResult<T> {

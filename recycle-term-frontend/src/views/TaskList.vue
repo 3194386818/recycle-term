@@ -105,15 +105,16 @@ const statusTypeMap: Record<number, { label: string; type: string }> = {
   3: { label: '待审核', type: 'danger' },
   4: { label: '审核成功', type: 'success' },
   5: { label: '审核失败', type: 'danger' },
+  6: { label: '已归档', type: 'info' },
 }
 
-const stats = ref<Stats>({ total: 0, completed: 0, pending: 0, needVisit: 0, failed: 0, totalScanned: 0 })
+const stats = ref<Stats>({ total: 0, completed: 0, pending: 0, needVisit: 0, failed: 0, totalScanned: 0, pendingReview: 0 })
 
 const statCards = ref([
   { key: '全部' as const, label: '总任务', value: 0, color: '#1677ff' },
   { key: 0, label: '待回收', value: 0, color: '#faad14' },
-  { key: 4, label: '已归档', value: 0, color: '#52c41a' },
-  { key: 3, label: '待审核', value: 0, color: '#ff4d4f' },
+  { key: 2, label: '待审核', value: 0, color: '#ff4d4f' },
+  { key: 6, label: '已归档', value: 0, color: '#52c41a' },
 ])
 
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
@@ -137,7 +138,9 @@ async function fetchTasks() {
       page: page.value,
       size: size.value,
     }
-    if (activeFilter.value !== '全部') {
+    if (activeFilter.value === 2) {
+      params.pendingReview = true
+    } else if (activeFilter.value !== '全部') {
       params.status = activeFilter.value
     }
     const { data: res } = await getTasks(params)
@@ -153,8 +156,8 @@ async function fetchStats() {
   stats.value = res.data
   statCards.value[0].value = res.data.total
   statCards.value[1].value = res.data.pending
-  statCards.value[2].value = res.data.completed
-  statCards.value[3].value = res.data.failed
+  statCards.value[2].value = res.data.pendingReview
+  statCards.value[3].value = res.data.completed
 }
 
 async function handleStatusChange(row: RecycleTask, status: number) {

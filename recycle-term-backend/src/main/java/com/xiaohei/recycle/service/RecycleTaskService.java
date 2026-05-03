@@ -26,7 +26,7 @@ public class RecycleTaskService {
     private final RecycleTaskRepository taskRepository;
     private final TerminalRecordRepository recordRepository;
 
-    public Page<RecycleTask> search(String keyword, Boolean completed, Boolean needVisit, Integer status, Pageable pageable) {
+    public Page<RecycleTask> search(String keyword, Boolean completed, Boolean needVisit, Integer status, Boolean pendingReview, Pageable pageable) {
         Specification<RecycleTask> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
             if (StringUtils.hasText(keyword)) {
@@ -40,7 +40,12 @@ public class RecycleTaskService {
                     cb.like(root.get("detailDesc"), like)
                 ));
             }
-            if (status != null) {
+            if (Boolean.TRUE.equals(pendingReview)) {
+                predicates.add(cb.or(
+                    cb.equal(root.get("status"), 2),
+                    cb.equal(root.get("status"), 3)
+                ));
+            } else if (status != null) {
                 predicates.add(cb.equal(root.get("status"), status));
             } else {
                 if (completed != null) {
@@ -141,6 +146,7 @@ public class RecycleTaskService {
             case 1 -> to == 2 || to == 3;
             case 2 -> to == 4 || to == 5;
             case 3 -> to == 4 || to == 5;
+            case 4 -> to == 6;
             case 5 -> to == 0;
             default -> false;
         };
@@ -153,22 +159,37 @@ public class RecycleTaskService {
         return switch (status) {
             case 0 -> "待回收";
             case 1 -> "已上门";
-            case 2 -> "已完成";
-            case 3 -> "已失败";
+            case 2 -> "已完成(待审核)";
+            case 3 -> "已失败(待审核)";
             case 4 -> "审核成功";
             case 5 -> "审核失败";
+            case 6 -> "已归档";
             default -> "未知";
         };
     }
 
     public StatsDto getStats() {
         long total = taskRepository.count();
-        long completed = taskRepository.count((root, query, cb) -> cb.equal(root.get("status"), 4));
+        long completed = taskRepository.count((root, query, cb) -> cb.equal(root.get("status"), 6));
         long pending = taskRepository.count((root, query, cb) -> cb.equal(root.get("status"), 0));
         long needVisit = taskRepository.count((root, query, cb) -> cb.equal(root.get("needVisit"), true));
-        long failed = taskRepository.count((root, query, cb) -> cb.equal(root.get("status"), 3));
+        long failed = taskRepository.count((root, query, cb) -> cb.equal(root.get("status"), 5));
         long totalScanned = recordRepository.count();
-        return new StatsDto(total, completed, pending, needVisit, failed, totalScanned);
+        long pendingReview = taskRepository.count((root, query, cb) -> cb.or(
+            cb.equal(root.get("status"), 2),
+            cb.equal(root.get("status"), 3)
+        ));
+        return new StatsDto(total, completed, pending, needVisit, failed, totalScanned, pendingReview);
+    }
+
+    @Transactional
+    public RecycleTask archive(Long id) {
+        RecycleTask task = getById(id);
+        if (task.getStatus() != 4) {
+            throw new RuntimeException("只有审核成功的任务才能归档");
+        }
+        task.setStatus(6);
+        return taskRepository.save(task);
     }
 
     @Transactional

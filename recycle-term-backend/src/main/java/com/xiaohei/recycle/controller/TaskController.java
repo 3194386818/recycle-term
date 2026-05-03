@@ -24,11 +24,12 @@ public class TaskController {
             @RequestParam(required = false) Boolean completed,
             @RequestParam(required = false) Boolean needVisit,
             @RequestParam(required = false) Integer status,
+            @RequestParam(required = false) Boolean pendingReview,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "100") int size
     ) {
         Page<RecycleTask> result = taskService.search(
-                keyword, completed, needVisit, status,
+                keyword, completed, needVisit, status, pendingReview,
                 PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id"))
         );
         return Result.ok(result);
@@ -54,6 +55,11 @@ public class TaskController {
     public Result<RecycleTask> review(@PathVariable Long id, @RequestParam boolean approved,
                                       @RequestParam(required = false) String reviewRemark) {
         return Result.ok(taskService.review(id, approved, reviewRemark, null));
+    }
+
+    @PatchMapping("/{id}/archive")
+    public Result<RecycleTask> archive(@PathVariable Long id) {
+        return Result.ok(taskService.archive(id));
     }
 
     @DeleteMapping("/{id}")
