@@ -25,12 +25,11 @@ public class TaskController {
             @RequestParam(required = false) Boolean needVisit,
             @RequestParam(required = false) Integer status,
             @RequestParam(required = false) Boolean pendingReview,
-            @RequestParam(required = false) String engineerPhone,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "100") int size
     ) {
         Page<RecycleTask> result = taskService.search(
-                keyword, completed, needVisit, status, pendingReview, engineerPhone,
+                keyword, completed, needVisit, status, pendingReview,
                 PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id"))
         );
         return Result.ok(result);

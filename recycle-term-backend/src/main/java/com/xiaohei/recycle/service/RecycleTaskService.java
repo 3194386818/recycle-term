@@ -26,7 +26,7 @@ public class RecycleTaskService {
     private final RecycleTaskRepository taskRepository;
     private final TerminalRecordRepository recordRepository;
 
-    public Page<RecycleTask> search(String keyword, Boolean completed, Boolean needVisit, Integer status, Boolean pendingReview, String engineerPhone, Pageable pageable) {
+    public Page<RecycleTask> search(String keyword, Boolean completed, Boolean needVisit, Integer status, Boolean pendingReview, Pageable pageable) {
         Specification<RecycleTask> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
             if (StringUtils.hasText(keyword)) {
@@ -39,9 +39,6 @@ public class RecycleTaskService {
                     cb.like(root.get("terminals"), like),
                     cb.like(root.get("detailDesc"), like)
                 ));
-            }
-            if (StringUtils.hasText(engineerPhone)) {
-                predicates.add(cb.equal(root.get("engineerPhone"), engineerPhone));
             }
             if (Boolean.TRUE.equals(pendingReview)) {
                 predicates.add(cb.or(
