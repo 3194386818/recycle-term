@@ -5,12 +5,9 @@ import com.xiaohei.recycle.dto.Result;
 import com.xiaohei.recycle.dto.TaskCreateDto;
 import com.xiaohei.recycle.entity.OperationLog;
 import com.xiaohei.recycle.entity.RecycleTask;
-import com.xiaohei.recycle.entity.Engineer;
 import com.xiaohei.recycle.service.AdminService;
-import com.xiaohei.recycle.service.EngineerService;
 import com.xiaohei.recycle.service.RecycleTaskService;
 import com.xiaohei.recycle.service.StatsService;
-import com.xiaohei.recycle.service.EngineerService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -29,7 +26,6 @@ public class AdminController {
     private final AdminService adminService;
     private final StatsService statsService;
     private final RecycleTaskService taskService;
-    private final EngineerService engineerService;
 
     @PostMapping("/login")
     public Result<Map<String, Object>> login(@RequestBody LoginRequest request, HttpServletRequest req) {
@@ -144,38 +140,5 @@ public class AdminController {
             ip = request.getRemoteAddr();
         }
         return ip;
-    }
-
-    @GetMapping("/engineers")
-    public Result<Page<Engineer>> getEngineers(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        return Result.ok(engineerService.getEngineers(PageRequest.of(page, size)));
-    }
-
-    @PostMapping("/engineers")
-    public Result<Engineer> createEngineer(@RequestBody Map<String, String> body) {
-        String phone = body.get("phone");
-        String name = body.get("name");
-        if (phone == null || phone.isBlank()) {
-            return Result.error("手机号不能为空");
-        }
-        try {
-            return Result.ok("创建成功", engineerService.createEngineer(phone, name));
-        } catch (RuntimeException e) {
-            return Result.error(e.getMessage());
-        }
-    }
-
-    @DeleteMapping("/engineers/{id}")
-    public Result<Void> deleteEngineer(@PathVariable Long id) {
-        engineerService.deleteEngineer(id);
-        return Result.ok("删除成功", null);
-    }
-
-    @PostMapping("/engineers/{id}/reset-password")
-    public Result<Void> resetPassword(@PathVariable Long id) {
-        engineerService.resetPassword(id);
-        return Result.ok("密码已重置为 admin123", null);
     }
 }

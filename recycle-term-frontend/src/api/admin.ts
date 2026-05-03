@@ -76,20 +76,3 @@ export function reviewTask(id: number, approved: boolean, reviewRemark?: string)
 export function getAdminRecords(taskId: number) {
   return adminApi.get<ApiResult<any[]>>(`/records/task/${taskId}`, { baseURL: '/api' })
 }
-
-// Engineer management
-export function getEngineers(params: { page?: number; size?: number }) {
-  return adminApi.get<ApiResult<PageResult<{ id: number; phone: string; name: string; createdAt: string }>>>('/engineers', { params })
-}
-
-export function createEngineer(phone: string, name: string) {
-  return adminApi.post<ApiResult<any>>('/engineers', { phone, name })
-}
-
-export function deleteEngineer(id: number) {
-  return adminApi.delete<ApiResult<void>>(`/engineers/${id}`)
-}
-
-export function resetEngineerPassword(id: number) {
-  return adminApi.post<ApiResult<void>>(`/engineers/${id}/reset-password`)
-}
