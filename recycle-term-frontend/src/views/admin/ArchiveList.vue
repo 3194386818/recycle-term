@@ -95,6 +95,11 @@ async function fetchTasks() {
     const { data: res } = await getAdminTasks({ keyword: keyword.value, status: 6, page: page.value, size: size.value })
     tasks.value = res.data.content
     total.value = res.data.totalElements
+    if (tasks.value.length === 0 && page.value > 0) {
+      page.value--
+      fetchTasks()
+      return
+    }
   } finally {
     loading.value = false
   }
