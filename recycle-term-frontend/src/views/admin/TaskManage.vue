@@ -123,7 +123,16 @@
               <el-descriptions-item label="接入间">{{ detailTask.accessRoom || '-' }}</el-descriptions-item>
               <el-descriptions-item label="发展部门">{{ detailTask.devDept || '-' }}</el-descriptions-item>
               <el-descriptions-item label="发展员工">{{ detailTask.devPerson || '-' }}</el-descriptions-item>
-              <el-descriptions-item label="应回收终端" :span="2">{{ detailTask.terminals || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="应回收终端" :span="2">
+                <template v-if="parsedTerminals.length">
+                  <el-table :data="parsedTerminals" size="small" border style="width:100%">
+                    <el-table-column label="序号" type="index" width="50" />
+                    <el-table-column label="设备类型" prop="type" width="120" />
+                    <el-table-column label="串码" prop="code" show-overflow-tooltip />
+                  </el-table>
+                </template>
+                <span v-else>-</span>
+              </el-descriptions-item>
             </el-descriptions>
             <h4 style="margin:16px 0 8px">已扫描串码 ({{ detailRecords.length }})</h4>
             <el-table :data="detailRecords" stripe size="small" max-height="200">
@@ -156,7 +165,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { getAdminTasks, createTask, updateAdminTask, deleteAdminTask, reviewTask, getAdminRecords, batchDeleteAdminTasks } from '../../api/admin'
 import { statusTypeMap } from '../../constants'
@@ -182,6 +191,16 @@ const reviewLoading = ref(false)
 const detailVisible = ref(false)
 const detailTask = ref<RecycleTask | null>(null)
 const detailRecords = ref<any[]>([])
+
+const parsedTerminals = computed(() => {
+  if (!detailTask.value?.terminals) return []
+  return detailTask.value.terminals.split('、').map(item => {
+    const idx = item.indexOf('_')
+    return idx > 0
+      ? { type: item.substring(0, idx), code: item.substring(idx + 1) }
+      : { type: '', code: item }
+  }).filter(t => t.code)
+})
 
 const selectedIds = ref<number[]>([])
 

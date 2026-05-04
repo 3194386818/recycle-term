@@ -39,7 +39,16 @@
           <el-tag :type="task.needVisit ? 'primary' : 'info'">{{ task.needVisit ? '是' : '否' }}</el-tag>
         </el-descriptions-item>
         <el-descriptions-item label="完成时间">{{ task.completedAt || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="应回收终端" :span="descColumn">{{ task.terminals || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="应回收终端" :span="descColumn">
+          <template v-if="parsedTerminals.length">
+            <el-table :data="parsedTerminals" size="small" border style="width:100%">
+              <el-table-column label="序号" type="index" width="50" />
+              <el-table-column label="设备类型" prop="type" width="120" />
+              <el-table-column label="串码" prop="code" show-overflow-tooltip />
+            </el-table>
+          </template>
+          <span v-else>-</span>
+        </el-descriptions-item>
         <el-descriptions-item label="备注" :span="descColumn">{{ task.remark || '-' }}</el-descriptions-item>
         <el-descriptions-item v-if="task.failReason" label="失败原因" :span="descColumn">
           <el-tag type="danger">{{ task.failReason }}</el-tag>
@@ -109,17 +118,23 @@ const taskId = Number(route.params.id)
 const isMobile = useIsMobile()
 const descColumn = computed(() => isMobile.value ? 1 : 2)
 
-const task = ref<RecycleTask | null>(null)
-const records = ref<TerminalRecord[]>([])
-const recordsLoading = ref(false)
-const failDialogVisible = ref(false)
-const failReason = ref('')
-const customFailReason = ref('')
-const statusLoading = ref(false)
+const parsedTerminals = computed(() => {
+  if (!task.value?.terminals) return []
+  return task.value.terminals.split('、').map(item => {
+    const idx = item.indexOf('_')
+    return idx > 0
+      ? { type: item.substring(0, idx), code: item.substring(idx + 1) }
+      : { type: '', code: item }
+  }).filter(t => t.code)
+})
 
 async function fetchTask() {
-  const { data: res } = await getTaskById(taskId)
-  task.value = res.data
+  try {
+    const { data: res } = await getTaskById(taskId)
+    task.value = res.data
+  } catch (e: any) {
+    ElMessage.error(e.response?.data?.message || '加载任务失败')
+  }
 }
 
 async function fetchRecords() {
