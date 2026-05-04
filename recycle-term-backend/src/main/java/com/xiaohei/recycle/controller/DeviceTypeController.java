@@ -17,8 +17,10 @@ public class DeviceTypeController {
     private final DeviceTypeService service;
 
     @GetMapping
-    public Result<List<DeviceType>> getAll() {
-        return Result.ok(service.getAll());
+    public Result<List<DeviceType>> getAll(
+            @RequestParam(required = false, defaultValue = "id") String sortBy,
+            @RequestParam(required = false, defaultValue = "desc") String sortOrder) {
+        return Result.ok(service.getAll(sortBy, sortOrder));
     }
 
     @PostMapping

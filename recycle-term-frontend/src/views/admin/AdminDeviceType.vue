@@ -10,10 +10,10 @@
           </div>
         </div>
       </template>
-      <el-table :data="types" v-loading="loading" stripe>
-        <el-table-column label="ID" prop="id" width="80" />
-        <el-table-column label="类型名称" prop="name" />
-        <el-table-column label="创建时间" prop="createdAt" width="180" />
+      <el-table :data="types" v-loading="loading" stripe @sort-change="handleSortChange">
+        <el-table-column label="ID" prop="id" width="80" sortable="custom" />
+        <el-table-column label="类型名称" prop="name" sortable="custom" />
+        <el-table-column label="创建时间" prop="createdAt" width="180" sortable="custom" />
         <el-table-column label="操作" width="100">
           <template #default="{ row }">
             <el-popconfirm title="确定删除？" @confirm="handleDelete(row.id)">
@@ -38,14 +38,31 @@ const types = ref<DeviceType[]>([])
 const loading = ref(false)
 const newName = ref('')
 const adding = ref(false)
+const sortParams = ref({
+  sortBy: 'id',
+  sortOrder: 'desc'
+})
 
 async function fetchTypes() {
   loading.value = true
   try {
-    const res = await fetch('/api/device-types')
+    const url = `/api/device-types?sortBy=${sortParams.value.sortBy}&sortOrder=${sortParams.value.sortOrder}`
+    const res = await fetch(url)
     const data = await res.json()
     types.value = data.data
   } finally { loading.value = false }
+}
+
+function handleSortChange({ column, prop, order }) {
+  if (!prop || !order) {
+    // 如果取消排序，则恢复默认排序
+    sortParams.value.sortBy = 'id'
+    sortParams.value.sortOrder = 'desc'
+  } else {
+    sortParams.value.sortBy = prop
+    sortParams.value.sortOrder = order === 'ascending' ? 'asc' : 'desc'
+  }
+  fetchTypes()
 }
 
 async function handleAdd() {
