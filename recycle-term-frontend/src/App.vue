@@ -176,6 +176,7 @@ function logout() {
   width: 100%;
   padding: 20px;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 .admin-main {
   padding: 20px;
