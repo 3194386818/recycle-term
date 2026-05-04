@@ -27,33 +27,8 @@ public class DeviceTypeService {
         }
     }
 
-    public List<DeviceType> getAll(String sortBy, String sortOrder) {
-        if ("id".equalsIgnoreCase(sortBy)) {
-            if ("asc".equalsIgnoreCase(sortOrder)) {
-                return repository.findAllByIdOrderByIdAsc();
-            } else {
-                return repository.findAllByIdOrderByIdDesc();
-            }
-        } else if ("name".equalsIgnoreCase(sortBy)) {
-            if ("asc".equalsIgnoreCase(sortOrder)) {
-                return repository.findAllByOrderByNameAsc();
-            } else {
-                return repository.findAllByOrderByNameDesc();
-            }
-        } else if ("createdAt".equalsIgnoreCase(sortBy)) {
-            if ("asc".equalsIgnoreCase(sortOrder)) {
-                return repository.findAllByOrderByCreatedAtAsc();
-            } else {
-                return repository.findAllByOrderByCreatedAtDesc();
-            }
-        } else {
-            // 默认按ID降序排列（最新ID在前）
-            return repository.findAllByIdOrderByIdDesc();
-        }
-    }
-
     public List<DeviceType> getAll() {
-        return getAll("id", "desc"); // 默认按ID降序
+        return repository.findAllByOrderByNameAsc();
     }
 
     @Transactional
