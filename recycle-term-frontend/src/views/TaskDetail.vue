@@ -41,11 +41,7 @@
         <el-descriptions-item label="完成时间">{{ task.completedAt || '-' }}</el-descriptions-item>
         <el-descriptions-item label="应回收终端" :span="descColumn">
           <template v-if="parsedTerminals.length">
-            <el-table :data="parsedTerminals" size="small" border style="width:100%">
-              <el-table-column label="序号" type="index" width="50" />
-              <el-table-column label="设备类型" prop="type" width="120" />
-              <el-table-column label="串码" prop="code" show-overflow-tooltip />
-            </el-table>
+            <el-tag v-for="t in parsedTerminals" :key="t.code" style="margin:2px">{{ t.type }}: {{ t.code }}</el-tag>
           </template>
           <span v-else>-</span>
         </el-descriptions-item>
