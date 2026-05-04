@@ -98,6 +98,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { readBarcodesFromImageData, getZXingModule, type ReaderOptions } from 'zxing-wasm/reader'
 import { getTaskById, getTasks, scanTerminals } from '../api'
+// TODO: 设备类型统一后，此处改用 DeviceType API 获取设备类型列表
 import { statusTypeMap } from '../constants'
 import type { RecycleTask } from '../types'
 

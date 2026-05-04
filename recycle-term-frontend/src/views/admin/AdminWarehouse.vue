@@ -1,10 +1,6 @@
 <template>
-  <div class="warehouse-search">
-    <el-page-header @back="$router.push('/')">
-      <template #content><span class="page-title">仓库管理</span></template>
-    </el-page-header>
-
-    <el-card shadow="never" style="margin-top:16px">
+  <div class="admin-warehouse">
+    <el-card shadow="never">
       <template #header>
         <div class="card-header">
           <el-input v-model="keyword" placeholder="搜索产品号、串码、客户名..." clearable style="width:300px" @input="debouncedFetch">
@@ -13,7 +9,8 @@
           <el-button type="primary" @click="showAdd">新增入库</el-button>
         </div>
       </template>
-      <el-table :data="items" v-loading="loading" stripe @row-click="goDetail">
+      <el-table :data="items" v-loading="loading" stripe>
+        <el-table-column label="ID" prop="id" width="60" />
         <el-table-column label="产品号" prop="productId" width="130" show-overflow-tooltip />
         <el-table-column label="设备数量" width="80" align="center">
           <template #default="{ row }">{{ parseDevices(row.devices).length }}</template>
@@ -25,14 +22,12 @@
           </template>
         </el-table-column>
         <el-table-column label="客户" prop="customerName" width="90" />
-        <el-table-column label="入库时间" prop="receivedAt" width="160" class-name="hide-mobile" header-class-name="hide-mobile" />
+        <el-table-column label="入库时间" prop="receivedAt" width="160" />
         <el-table-column label="操作" width="140" fixed="right">
           <template #default="{ row }">
-            <el-button size="small" @click.stop="showEdit(row)">编辑</el-button>
+            <el-button size="small" @click="showEdit(row)">编辑</el-button>
             <el-popconfirm title="确定删除？" @confirm="handleDelete(row.id)">
-              <template #reference>
-                <el-button size="small" type="danger" @click.stop>删除</el-button>
-              </template>
+              <template #reference><el-button size="small" type="danger">删除</el-button></template>
             </el-popconfirm>
           </template>
         </el-table-column>
@@ -43,7 +38,7 @@
     </el-card>
 
     <!-- Add/Edit Dialog -->
-    <el-dialog v-model="dialogVisible" :title="editId ? '编辑入库' : '新增入库'" width="650px" destroy-on-close>
+    <el-dialog v-model="dialogVisible" :title="editId ? '编辑入库' : '新增入库'" width="700px" destroy-on-close>
       <el-form :model="form" label-width="90px">
         <el-row :gutter="12">
           <el-col :span="12"><el-form-item label="产品号" required><el-input v-model="form.productId" placeholder="020开头" /></el-form-item></el-col>
@@ -63,7 +58,9 @@
           <el-button :type="scanningIndex === i ? 'danger' : 'success'" :icon="Camera" circle size="small" @click="toggleScan(i)" />
           <el-button type="danger" :icon="Delete" circle size="small" @click="formDevices.splice(i, 1)" />
         </div>
-        <el-button type="primary" plain size="small" @click="formDevices.push({ type: '', sn: '' })">+ 添加设备</el-button>
+        <div style="display:flex;gap:12px;align-items:center">
+          <el-button type="primary" plain size="small" @click="formDevices.push({ type: '', sn: '' })">+ 添加设备</el-button>
+        </div>
         <!-- Scanner preview -->
         <div v-if="scanningIndex !== null" class="scanner-preview">
           <video ref="videoRef" class="scanner-video" autoplay playsinline muted></video>
@@ -80,16 +77,13 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Delete, Camera } from '@element-plus/icons-vue'
-import { searchWarehouse, createWarehouseItem, updateWarehouseItem, deleteWarehouseItem } from '../../api/warehouse'
 import { useScanner } from '../../composables/useScanner'
 import type { WarehouseItem, DeviceInfo } from '../../api/warehouse'
 
 interface DeviceType { id: number; name: string }
 
-const router = useRouter()
 const items = ref<WarehouseItem[]>([])
 const loading = ref(false)
 const page = ref(0)
@@ -118,18 +112,23 @@ function parseDevices(json: string): DeviceInfo[] {
   try { return JSON.parse(json || '[]') } catch { return [] }
 }
 
+async function fetchDeviceTypes() {
+  const res = await fetch('/api/device-types')
+  const data = await res.json()
+  deviceTypes.value = data.data
+}
+
 async function fetchItems() {
   loading.value = true
   try {
-    const { data: res } = await searchWarehouse(keyword.value, page.value, size.value)
-    items.value = res.data.content
-    total.value = res.data.totalElements
+    const params = new URLSearchParams({ page: String(page.value), size: String(size.value) })
+    if (keyword.value) params.set('keyword', keyword.value)
+    const res = await fetch(`/api/warehouse?${params}`)
+    const data = await res.json()
+    items.value = data.data.content
+    total.value = data.data.totalElements
     if (items.value.length === 0 && page.value > 0) { page.value--; fetchItems(); return }
   } finally { loading.value = false }
-}
-
-function goDetail(row: WarehouseItem) {
-  router.push(`/warehouse/${row.id}`)
 }
 
 function showAdd() {
@@ -177,48 +176,43 @@ function closeDialog() {
   dialogVisible.value = false
 }
 
-async function fetchDeviceTypes() {
-  const res = await fetch('/api/device-types')
-  const data = await res.json()
-  deviceTypes.value = data.data
-}
-
 async function handleSubmit() {
   if (!form.value.productId) { ElMessage.warning('请输入产品号'); return }
   const validDevices = formDevices.value.filter(d => d.sn.trim())
   submitting.value = true
   try {
     const payload = { ...form.value, devices: JSON.stringify(validDevices) }
-    if (editId.value) {
-      await updateWarehouseItem(editId.value, payload)
-      ElMessage.success('修改成功')
+    const url = editId.value ? `/api/warehouse/${editId.value}` : '/api/warehouse'
+    const method = editId.value ? 'PUT' : 'POST'
+    const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+    const data = await res.json()
+    if (data.code === 200) {
+      ElMessage.success(editId.value ? '修改成功' : '入库成功')
+      closeDialog()
+      fetchItems()
     } else {
-      await createWarehouseItem(payload)
-      ElMessage.success('入库成功')
+      ElMessage.error(data.message)
     }
-    closeDialog()
-    fetchItems()
-  } catch (e: any) {
-    ElMessage.error(e.response?.data?.message || '操作失败')
-  } finally { submitting.value = false }
+  } catch { ElMessage.error('操作失败') }
+  finally { submitting.value = false }
 }
 
 async function handleDelete(id: number) {
   try {
-    await deleteWarehouseItem(id)
-    ElMessage.success('删除成功')
-    fetchItems()
-  } catch (e: any) {
-    ElMessage.error(e.response?.data?.message || '删除失败')
-  }
+    const res = await fetch(`/api/warehouse/${id}`, { method: 'DELETE' })
+    const data = await res.json()
+    if (data.code === 200) { ElMessage.success('删除成功'); fetchItems() }
+    else ElMessage.error(data.message)
+  } catch { ElMessage.error('删除失败') }
 }
 
 onMounted(() => { fetchItems(); fetchDeviceTypes() })
 </script>
 
 <style scoped>
-.page-title { font-weight: 600; }
 .card-header { display: flex; justify-content: space-between; align-items: center; }
 .pagination { margin-top: 16px; display: flex; justify-content: flex-end; }
-:deep(.hide-mobile) { display: none !important; }
+.scanner-preview { margin-top: 12px; border-radius: 8px; overflow: hidden; border: 1px solid #eee; position: relative; }
+.scanner-video { width: 100%; max-height: 240px; object-fit: cover; }
+.scan-error { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,.6); color: #fff; padding: 4px 12px; border-radius: 4px; font-size: 13px; }
 </style>

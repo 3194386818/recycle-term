@@ -55,6 +55,7 @@ public class ExcelImportService {
                 task.setUserAddress(getStringCell(row, 31));      // Col 31: 用户地址
                 task.setNeedVisit("是".equals(getStringCell(row, 35))); // Col 35: 是否上门
                 task.setTerminals(getStringCell(row, 39));        // Col 39: 应回收终端
+                // TODO: 设备类型统一后，此处改用 DeviceType API 解析终端中的设备类型
                 task.setExpectedCount(getIntCell(row, 40));       // Col 40: 下发应回终端数量(原始)
                 task.setFttrCount(getIntCell(row, 42));           // Col 42: 其中应回收FTTR主光猫数量
 
