@@ -41,22 +41,22 @@ public class ExcelImportService {
                 if (row == null) continue;
 
                 RecycleTask task = new RecycleTask();
-                task.setPhoneNumber(getStringCell(row, 0));       // Col 0: 用户号码
-                task.setProductId(getStringCell(row, 10));         // Col 10: 产品号(020开头)
-                task.setEngineerName(getStringCell(row, 4));       // Col 4: 工程师姓名
-                task.setEngineerPhone(getStringCell(row, 2));      // Col 2: 工程师手机号
-                task.setDetailDesc(getStringCell(row, 8));         // Col 8: 详情说明
-                task.setUserName(getStringCell(row, 11));          // Col 11: 用户名称
-                task.setAccessRoom(getStringCell(row, 14));        // Col 14: 接入间名称
-                task.setCategory(getStringCell(row, 15));          // Col 15: 分类/细分
-                task.setDevDept(getStringCell(row, 20));           // Col 20: 发展部门
-                task.setDevPerson(getStringCell(row, 21));         // Col 21: 发展员工
-                task.setArea(getStringCell(row, 22));              // Col 22: 区域
-                task.setUserAddress(getStringCell(row, 23));       // Col 23: 用户地址
-                task.setNeedVisit("是".equals(getStringCell(row, 27))); // Col 27: 是否上门
-                task.setTerminals(getStringCell(row, 31));         // Col 31: 应回收终端
-                task.setExpectedCount(getIntCell(row, 33));        // Col 33: 实际应回终端数量
-                task.setFttrCount(getIntCell(row, 34));            // Col 34: FTTR主光猫数量
+                task.setPhoneNumber(getStringCell(row, 8));       // Col 8: 用户号码 (手机号)
+                task.setProductId(getStringCell(row, 18));        // Col 18: 产品号 (020开头)
+                task.setEngineerPhone(getStringCell(row, 10));    // Col 10: 工程师手机号
+                task.setEngineerName(getStringCell(row, 12));     // Col 12: 工程师姓名
+                task.setDetailDesc(getStringCell(row, 16));       // Col 16: 详情说明
+                task.setUserName(getStringCell(row, 19));         // Col 19: 用户名称
+                task.setAccessRoom(getStringCell(row, 22));       // Col 22: 接入间名称
+                task.setCategory(getStringCell(row, 23));         // Col 23: 分类/细分
+                task.setDevDept(getStringCell(row, 28));          // Col 28: 发展部门
+                task.setDevPerson(getStringCell(row, 29));        // Col 29: 发展员工
+                task.setArea(getStringCell(row, 30));             // Col 30: 区域
+                task.setUserAddress(getStringCell(row, 31));      // Col 31: 用户地址
+                task.setNeedVisit("是".equals(getStringCell(row, 35))); // Col 35: 是否上门
+                task.setTerminals(getStringCell(row, 39));        // Col 39: 应回收终端
+                task.setExpectedCount(getIntCell(row, 40));       // Col 40: 下发应回终端数量(原始)
+                task.setFttrCount(getIntCell(row, 42));           // Col 42: 其中应回收FTTR主光猫数量
 
                 tasks.add(task);
             }
@@ -74,30 +74,7 @@ public class ExcelImportService {
         Cell cell = row.getCell(col);
         if (cell == null) return null;
         try {
-            switch (cell.getCellType()) {
-                case STRING:
-                    break;
-                case NUMERIC:
-                    cell.setCellType(CellType.STRING);
-                    break;
-                case FORMULA:
-                    // Evaluate formula, get the result
-                    try {
-                        DataFormatter formatter = new DataFormatter();
-                        return formatter.formatCellValue(cell);
-                    } catch (Exception e) {
-                        cell.setCellType(CellType.STRING);
-                    }
-                    break;
-                default:
-                    cell.setCellType(CellType.STRING);
-            }
-        } catch (Exception e) {
-            cell.setCellType(CellType.STRING);
-        }
-        try {
-            String val = cell.getStringCellValue();
-            return (val != null && !val.isBlank()) ? val.trim() : null;
+            return new DataFormatter().formatCellValue(cell).trim();
         } catch (Exception e) {
             return null;
         }
