@@ -114,6 +114,14 @@ const taskId = Number(route.params.id)
 const isMobile = useIsMobile()
 const descColumn = computed(() => isMobile.value ? 1 : 2)
 
+const task = ref<RecycleTask | null>(null)
+const records = ref<TerminalRecord[]>([])
+const recordsLoading = ref(false)
+const failDialogVisible = ref(false)
+const failReason = ref('')
+const customFailReason = ref('')
+const statusLoading = ref(false)
+
 const parsedTerminals = computed(() => {
   if (!task.value?.terminals) return []
   return task.value.terminals.split('、').map(item => {
