@@ -3,6 +3,11 @@ import { createRouter, createWebHistory } from 'vue-router'
 const routes = [
   {
     path: '/',
+    name: 'Home',
+    component: () => import('../views/Home.vue'),
+  },
+  {
+    path: '/task',
     name: 'TaskList',
     component: () => import('../views/TaskList.vue'),
   },
@@ -15,6 +20,16 @@ const routes = [
     path: '/scan/:id',
     name: 'ScanPage',
     component: () => import('../views/ScanPage.vue'),
+  },
+  {
+    path: '/warehouse',
+    name: 'WarehouseSearch',
+    component: () => import('../views/warehouse/WarehouseSearch.vue'),
+  },
+  {
+    path: '/warehouse/:id',
+    name: 'WarehouseDetail',
+    component: () => import('../views/warehouse/WarehouseDetail.vue'),
   },
   {
     path: '/admin/login',
