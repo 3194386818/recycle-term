@@ -39,7 +39,7 @@ public class TerminalRecordService {
         recordRepository.saveAll(records);
 
         // Check if all terminals scanned, auto-complete
-        long scannedCount = recordRepository.findByTaskIdOrderByScannedAtDesc(taskId).size();
+        long scannedCount = recordRepository.countByTaskId(taskId);
         if (task.getExpectedCount() != null && scannedCount >= task.getExpectedCount() && !task.getCompleted()) {
             task.setCompleted(true);
             task.setCompletedAt(LocalDateTime.now());

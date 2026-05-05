@@ -1,7 +1,10 @@
 package com.xiaohei.recycle.controller;
 
 import com.xiaohei.recycle.dto.Result;
+import com.xiaohei.recycle.dto.WarehouseChangeRequestCreateDto;
+import com.xiaohei.recycle.entity.WarehouseChangeRequest;
 import com.xiaohei.recycle.entity.WarehouseItem;
+import com.xiaohei.recycle.service.WarehouseChangeRequestService;
 import com.xiaohei.recycle.service.WarehouseService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -15,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 public class WarehouseController {
 
     private final WarehouseService warehouseService;
+    private final WarehouseChangeRequestService requestService;
 
     @GetMapping
     public Result<Page<WarehouseItem>> search(
@@ -22,7 +26,7 @@ public class WarehouseController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
-        PageRequest pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "id"));
+        PageRequest pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "receivedAt"));
         return Result.ok(warehouseService.search(keyword, pageable));
     }
 
@@ -45,5 +49,15 @@ public class WarehouseController {
     public Result<Void> delete(@PathVariable Long id) {
         warehouseService.delete(id);
         return Result.ok("删除成功", null);
+    }
+
+    @PostMapping("/{id}/outbound")
+    public Result<WarehouseItem> outbound(@PathVariable Long id, @RequestParam String sn) {
+        return Result.ok("出库成功", warehouseService.outboundDevice(id, sn));
+    }
+
+    @PostMapping("/requests")
+    public Result<WarehouseChangeRequest> createRequest(@RequestBody WarehouseChangeRequestCreateDto dto) {
+        return Result.ok("申请已提交", requestService.create(dto));
     }
 }

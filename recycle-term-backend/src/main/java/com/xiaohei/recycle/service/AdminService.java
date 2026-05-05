@@ -8,6 +8,7 @@ import com.xiaohei.recycle.entity.RecycleTask;
 import com.xiaohei.recycle.repository.AdminUserRepository;
 import com.xiaohei.recycle.repository.OperationLogRepository;
 import com.xiaohei.recycle.repository.RecycleTaskRepository;
+import com.xiaohei.recycle.repository.TerminalRecordRepository;
 import com.xiaohei.recycle.util.JwtUtil;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +30,7 @@ public class AdminService {
     private final AdminUserRepository adminUserRepository;
     private final OperationLogRepository logRepository;
     private final RecycleTaskRepository taskRepository;
+    private final TerminalRecordRepository recordRepository;
     private final JwtUtil jwtUtil;
 
     @PostConstruct
@@ -56,7 +58,7 @@ public class AdminService {
         return result;
     }
 
-    public Page<RecycleTask> getTasks(String keyword, Integer status, Pageable pageable) {
+    public Page<RecycleTask> getTasks(String keyword, Integer status, Boolean pendingReview, Pageable pageable) {
         Specification<RecycleTask> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
             if (keyword != null && !keyword.isBlank()) {
@@ -68,7 +70,12 @@ public class AdminService {
                     cb.like(root.get("userAddress"), like)
                 ));
             }
-            if (status != null) {
+            if (Boolean.TRUE.equals(pendingReview)) {
+                predicates.add(cb.or(
+                        cb.equal(root.get("status"), 2),
+                        cb.equal(root.get("status"), 3)
+                ));
+            } else if (status != null) {
                 predicates.add(cb.equal(root.get("status"), status));
             }
             return cb.and(predicates.toArray(new Predicate[0]));
@@ -105,14 +112,15 @@ public class AdminService {
         if (!taskRepository.existsById(id)) {
             throw new RuntimeException("任务不存在");
         }
+        recordRepository.deleteByTaskId(id);
         taskRepository.deleteById(id);
     }
 
     @Transactional
     public void batchDeleteTasks(List<Long> ids) {
-        for (Long id : ids) {
-            taskRepository.deleteById(id);
-        }
+        if (ids == null || ids.isEmpty()) return;
+        recordRepository.deleteByTaskIdIn(ids);
+        taskRepository.deleteAllByIdInBatch(ids);
     }
 
     public void log(Long adminId, String adminUsername, String action, String detail, String ip) {

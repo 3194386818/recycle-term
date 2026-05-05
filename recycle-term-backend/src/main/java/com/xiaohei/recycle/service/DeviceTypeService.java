@@ -4,6 +4,7 @@ import com.xiaohei.recycle.entity.DeviceType;
 import com.xiaohei.recycle.repository.DeviceTypeRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,8 +28,17 @@ public class DeviceTypeService {
         }
     }
 
+    public List<DeviceType> getAll(String sortBy, String sortOrder) {
+        String actualSortBy = switch (sortBy) {
+            case "name", "createdAt", "id" -> sortBy;
+            default -> "id";
+        };
+        Sort.Direction direction = "asc".equalsIgnoreCase(sortOrder) ? Sort.Direction.ASC : Sort.Direction.DESC;
+        return repository.findAll(Sort.by(direction, actualSortBy));
+    }
+
     public List<DeviceType> getAll() {
-        return repository.findAllByOrderByNameAsc();
+        return getAll("id", "desc");
     }
 
     @Transactional

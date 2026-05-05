@@ -1,6 +1,7 @@
 package com.xiaohei.recycle.entity;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
 
@@ -20,6 +21,13 @@ public class WarehouseItem {
 
     @Column(name = "devices", columnDefinition = "TEXT")
     private String devices;
+
+    @Column(name = "outbound", nullable = false)
+    private Boolean outbound = false;
+
+    @Column(name = "outbound_at")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime outboundAt;
 
     @Column(name = "customer_name", length = 50)
     private String customerName;
@@ -41,5 +49,6 @@ public class WarehouseItem {
 
     @CreationTimestamp
     @Column(name = "received_at", updatable = false)
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime receivedAt;
 }

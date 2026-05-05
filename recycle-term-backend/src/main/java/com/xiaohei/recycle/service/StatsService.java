@@ -21,17 +21,28 @@ public class StatsService {
     public List<Map<String, Object>> getDailyStats(int days) {
         List<Map<String, Object>> result = new ArrayList<>();
         LocalDate today = LocalDate.now();
+        LocalDate startDate = today.minusDays(days - 1L);
+        LocalDateTime start = startDate.atStartOfDay();
+        LocalDateTime end = today.atTime(LocalTime.MAX);
+
+        Map<String, Long> completedByDate = new HashMap<>();
+        for (Object[] row : taskRepository.countCompletedGroupByDate(start, end)) {
+            completedByDate.put(String.valueOf(row[0]), ((Number) row[1]).longValue());
+        }
+
+        Map<String, Long> scannedByDate = new HashMap<>();
+        for (Object[] row : recordRepository.countScannedGroupByDate(start, end)) {
+            scannedByDate.put(String.valueOf(row[0]), ((Number) row[1]).longValue());
+        }
 
         for (int i = days - 1; i >= 0; i--) {
             LocalDate date = today.minusDays(i);
-            LocalDateTime start = date.atStartOfDay();
-            LocalDateTime end = date.atTime(LocalTime.MAX);
-
-            long completed = taskRepository.countByCompletedAtBetween(start, end);
-            long scanned = recordRepository.countByScannedAtBetween(start, end);
+            String dateKey = date.toString();
+            long completed = completedByDate.getOrDefault(dateKey, 0L);
+            long scanned = scannedByDate.getOrDefault(dateKey, 0L);
 
             Map<String, Object> item = new HashMap<>();
-            item.put("date", date.toString());
+            item.put("date", dateKey);
             item.put("completed", completed);
             item.put("scanned", scanned);
             result.add(item);
