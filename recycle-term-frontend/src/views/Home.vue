@@ -1,7 +1,7 @@
 <template>
   <div class="home-page">
     <div class="home-header">
-      <h1>终端回收管理系统</h1>
+      <h1>小黑の系统</h1>
       <p>欢迎使用，请选择功能模块</p>
     </div>
     <div class="module-grid">

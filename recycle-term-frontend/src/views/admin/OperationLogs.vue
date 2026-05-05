@@ -12,7 +12,9 @@
         </el-table-column>
         <el-table-column label="详情" prop="detail" show-overflow-tooltip />
         <el-table-column label="IP" prop="ip" width="130" />
-        <el-table-column label="时间" prop="createdAt" width="180" />
+        <el-table-column label="时间" width="180">
+          <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
+        </el-table-column>
       </el-table>
       <div class="pagination">
         <el-pagination v-model:current-page="page" :page-size="size" :total="total" layout="total, prev, pager, next" @current-change="fetchLogs" />
@@ -25,6 +27,7 @@
 import { ref, onMounted } from 'vue'
 import { getLogs } from '../../api/admin'
 import type { OperationLog } from '../../types'
+import { formatDateTime } from '../../utils/datetime'
 
 const logs = ref<OperationLog[]>([])
 const loading = ref(false)

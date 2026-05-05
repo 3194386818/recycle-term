@@ -96,11 +96,11 @@
 import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { readBarcodesFromImageData, getZXingModule, type ReaderOptions } from 'zxing-wasm/reader'
 import { getTaskById, getTasks, scanTerminals } from '../api'
 // TODO: 设备类型统一后，此处改用 DeviceType API 获取设备类型列表
 import { statusTypeMap } from '../constants'
 import type { RecycleTask } from '../types'
+import { useScanner } from '../composables/useScanner'
 
 const route = useRoute()
 const router = useRouter()
@@ -112,22 +112,10 @@ const manualSn = ref('')
 const searchKeyword = ref('')
 const taskList = ref<RecycleTask[]>([])
 const cameraError = ref('')
-const scanning = ref(false)
-
-const videoRef = ref<HTMLVideoElement | null>(null)
-const canvasRef = ref<HTMLCanvasElement | null>(null)
-
-let stream: MediaStream | null = null
-let scanTimer = 0
+const { isScanning: scanning, videoRef, canvasRef, startScan, stopScan } = useScanner()
+void videoRef
+void canvasRef
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
-
-const readerOptions: ReaderOptions = {
-  formats: ['QRCode', 'Code128', 'Code39', 'Code93', 'EAN-13', 'EAN-8', 'UPC-A', 'UPC-E', 'ITF', 'Codabar'],
-  tryHarder: true,
-  tryRotate: true,
-  tryDownscale: true,
-  maxNumberOfSymbols: 1,
-}
 
 async function fetchTask() {
   if (taskId.value <= 0) return
@@ -174,79 +162,17 @@ async function submitScan() {
 
 async function startScanner() {
   cameraError.value = ''
-  if (!videoRef.value) return
-
   try {
-    // Pre-load WASM module while requesting camera
-    const wasmReady = getZXingModule()
-
-    stream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: 'environment',
-        width: { ideal: 1280 },
-        height: { ideal: 720 },
-      },
-      audio: false,
-    })
-
-    videoRef.value.srcObject = stream
-    await videoRef.value.play()
-    await wasmReady
-
-    scanning.value = true
-    scanLoop()
+    await startScan(onBarcodeDetected)
   } catch (err: any) {
-    console.error('Scanner start failed:', err)
     cameraError.value = '摄像头不可用: ' + (err?.message || err)
   }
-}
-
-function scanLoop() {
-  if (!scanning.value || !videoRef.value || !canvasRef.value) return
-
-  const video = videoRef.value
-  const canvas = canvasRef.value
-
-  if (video.readyState === video.HAVE_ENOUGH_DATA) {
-    canvas.width = video.videoWidth
-    canvas.height = video.videoHeight
-    const ctx = canvas.getContext('2d', { willReadFrequently: true })
-    if (ctx) {
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-
-      readBarcodesFromImageData(imageData, readerOptions).then((results) => {
-        for (const result of results) {
-          if (result.isValid && result.text) {
-            onBarcodeDetected(result.text)
-          }
-        }
-      }).catch(() => {})
-    }
-  }
-
-  scanTimer = requestAnimationFrame(scanLoop)
 }
 
 function onBarcodeDetected(text: string) {
   if (!text || scannedSNs.value.includes(text)) return
   scannedSNs.value.push(text)
   ElMessage.success('扫描: ' + text)
-}
-
-function stopScanner() {
-  scanning.value = false
-  if (scanTimer) {
-    cancelAnimationFrame(scanTimer)
-    scanTimer = 0
-  }
-  if (stream) {
-    stream.getTracks().forEach((t) => t.stop())
-    stream = null
-  }
-  if (videoRef.value) {
-    videoRef.value.srcObject = null
-  }
 }
 
 onMounted(async () => {
@@ -261,7 +187,8 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
-  stopScanner()
+  if (debounceTimer) clearTimeout(debounceTimer)
+  stopScan()
 })
 </script>
 

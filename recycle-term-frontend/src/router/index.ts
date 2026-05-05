@@ -55,6 +55,7 @@ const routes = [
       { path: 'archive', name: 'ArchiveList', component: () => import('../views/admin/ArchiveList.vue') },
       { path: 'batch', name: 'BatchImport', component: () => import('../views/admin/BatchImport.vue') },
       { path: 'warehouse', name: 'AdminWarehouse', component: () => import('../views/admin/AdminWarehouse.vue') },
+      { path: 'warehouse-requests', name: 'AdminWarehouseRequests', component: () => import('../views/admin/AdminWarehouseRequests.vue') },
       { path: 'device-types', name: 'AdminDeviceType', component: () => import('../views/admin/AdminDeviceType.vue') },
       { path: 'logs', name: 'OperationLogs', component: () => import('../views/admin/OperationLogs.vue') },
     ],

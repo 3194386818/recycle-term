@@ -134,7 +134,9 @@
             <el-table :data="detailRecords" stripe size="small" max-height="200">
               <el-table-column label="序号" type="index" width="50" />
               <el-table-column label="终端串码" prop="serialNumber" />
-              <el-table-column label="扫描时间" prop="scannedAt" width="160" />
+              <el-table-column label="扫描时间" width="170">
+                <template #default="{ row }">{{ formatDateTime(row.scannedAt) }}</template>
+              </el-table-column>
             </el-table>
             <el-empty v-if="detailRecords.length === 0" description="暂无扫描记录" :image-size="60" />
           </el-tab-pane>
@@ -145,8 +147,8 @@
                 <el-tag :type="statusTypeMap[detailTask.status]?.type" size="small">{{ statusTypeMap[detailTask.status]?.label }}</el-tag>
               </el-descriptions-item>
               <el-descriptions-item label="是否上门">{{ detailTask.needVisit ? '是' : '否' }}</el-descriptions-item>
-              <el-descriptions-item label="完成时间">{{ detailTask.completedAt || '-' }}</el-descriptions-item>
-              <el-descriptions-item label="创建时间">{{ detailTask.createdAt }}</el-descriptions-item>
+              <el-descriptions-item label="完成时间">{{ formatDateTime(detailTask.completedAt) }}</el-descriptions-item>
+              <el-descriptions-item label="创建时间">{{ formatDateTime(detailTask.createdAt) }}</el-descriptions-item>
               <el-descriptions-item label="失败原因" :span="2" v-if="detailTask.failReason">
                 <el-tag type="danger">{{ detailTask.failReason }}</el-tag>
               </el-descriptions-item>
@@ -164,8 +166,9 @@
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { getAdminTasks, createTask, updateAdminTask, deleteAdminTask, reviewTask, getAdminRecords, batchDeleteAdminTasks } from '../../api/admin'
-import { statusTypeMap } from '../../constants'
+import { statusTypeMap, statusStepIndexMap } from '../../constants'
 import type { RecycleTask } from '../../types'
+import { formatDateTime } from '../../utils/datetime'
 
 const tasks = ref<RecycleTask[]>([])
 const loading = ref(false)
@@ -282,8 +285,7 @@ async function handleDelete(id: number) {
 }
 
 function statusStepIndex(status: number): number {
-  const map: Record<number, number> = { 0: 0, 1: 1, 2: 2, 3: 2, 4: 3, 5: 3, 6: 3 }
-  return map[status] ?? 0
+  return statusStepIndexMap[status] ?? 0
 }
 
 async function showDetail(row: RecycleTask) {

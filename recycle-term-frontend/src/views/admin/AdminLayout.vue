@@ -20,6 +20,7 @@
           <el-menu-item index="/admin/archive"><el-icon><FolderChecked /></el-icon><template #title>归档</template></el-menu-item>
           <el-menu-item index="/admin/batch"><el-icon><Upload /></el-icon><template #title>批量导入</template></el-menu-item>
           <el-menu-item index="/admin/warehouse"><el-icon><Box /></el-icon><template #title>仓库管理</template></el-menu-item>
+          <el-menu-item index="/admin/warehouse-requests"><el-icon><Checked /></el-icon><template #title>仓库申请审核</template></el-menu-item>
           <el-menu-item index="/admin/device-types"><el-icon><Setting /></el-icon><template #title>设备类型</template></el-menu-item>
           <el-menu-item index="/admin/logs"><el-icon><Document /></el-icon><template #title>操作日志</template></el-menu-item>
         </el-menu>

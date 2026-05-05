@@ -10,10 +10,12 @@
           </div>
         </div>
       </template>
-      <el-table :data="types" v-loading="loading" stripe @sort-change="handleSortChange">
+      <el-table :data="types" v-loading="loading" stripe :default-sort="{ prop: 'id', order: 'ascending' }" @sort-change="handleSortChange">
         <el-table-column label="ID" prop="id" width="80" sortable="custom" />
         <el-table-column label="类型名称" prop="name" sortable="custom" />
-        <el-table-column label="创建时间" prop="createdAt" width="180" sortable="custom" />
+        <el-table-column label="创建时间" width="180" sortable="custom">
+          <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
+        </el-table-column>
         <el-table-column label="操作" width="100">
           <template #default="{ row }">
             <el-popconfirm title="确定删除？" @confirm="handleDelete(row.id)">
@@ -31,6 +33,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import { formatDateTime } from '../../utils/datetime'
 
 interface DeviceType { id: number; name: string; createdAt: string }
 
@@ -40,7 +43,7 @@ const newName = ref('')
 const adding = ref(false)
 const sortParams = ref({
   sortBy: 'id',
-  sortOrder: 'desc'
+  sortOrder: 'asc'
 })
 
 async function fetchTypes() {
@@ -53,11 +56,11 @@ async function fetchTypes() {
   } finally { loading.value = false }
 }
 
-function handleSortChange({ column, prop, order }) {
+function handleSortChange({ prop, order }: { prop?: string; order?: 'ascending' | 'descending' | null }) {
   if (!prop || !order) {
     // 如果取消排序，则恢复默认排序
     sortParams.value.sortBy = 'id'
-    sortParams.value.sortOrder = 'desc'
+    sortParams.value.sortOrder = 'asc'
   } else {
     sortParams.value.sortBy = prop
     sortParams.value.sortOrder = order === 'ascending' ? 'asc' : 'desc'

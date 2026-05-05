@@ -46,7 +46,7 @@
           <el-descriptions-item label="区域">{{ detailTask.area }}</el-descriptions-item>
           <el-descriptions-item label="用户地址" :span="2">{{ detailTask.userAddress }}</el-descriptions-item>
           <el-descriptions-item label="工程师">{{ detailTask.engineerName }} ({{ detailTask.engineerPhone }})</el-descriptions-item>
-          <el-descriptions-item label="完成时间">{{ detailTask.completedAt || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="完成时间">{{ formatDateTime(detailTask.completedAt) }}</el-descriptions-item>
           <el-descriptions-item label="失败原因" :span="2" v-if="detailTask.failReason">
             <el-tag type="danger">{{ detailTask.failReason }}</el-tag>
           </el-descriptions-item>
@@ -58,7 +58,9 @@
         <el-table :data="detailRecords" stripe size="small" max-height="200">
           <el-table-column label="序号" type="index" width="50" />
           <el-table-column label="终端串码" prop="serialNumber" />
-          <el-table-column label="扫描时间" prop="scannedAt" width="160" />
+          <el-table-column label="扫描时间" width="170">
+            <template #default="{ row }">{{ formatDateTime(row.scannedAt) }}</template>
+          </el-table-column>
         </el-table>
         <el-empty v-if="detailRecords.length === 0" description="无扫描记录" :image-size="60" />
       </div>
@@ -71,6 +73,7 @@ import { ref, onMounted } from 'vue'
 import { getAdminTasks } from '../../api/admin'
 import { getRecordsByTaskId } from '../../api'
 import type { RecycleTask, TerminalRecord } from '../../types'
+import { formatDateTime } from '../../utils/datetime'
 
 const tasks = ref<RecycleTask[]>([])
 const loading = ref(false)

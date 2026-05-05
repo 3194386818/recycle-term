@@ -1,6 +1,6 @@
 <template>
   <div class="task-detail" v-if="task">
-    <el-page-header @back="$router.push('/')">
+    <el-page-header @back="$router.push('/task')">
       <template #content>
         <span class="page-title">{{ task.userName }} 的回收任务</span>
       </template>
@@ -38,7 +38,7 @@
         <el-descriptions-item label="是否上门">
           <el-tag :type="task.needVisit ? 'primary' : 'info'">{{ task.needVisit ? '是' : '否' }}</el-tag>
         </el-descriptions-item>
-        <el-descriptions-item label="完成时间">{{ task.completedAt || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="完成时间">{{ formatDateTime(task.completedAt) }}</el-descriptions-item>
         <el-descriptions-item label="应回收终端" :span="descColumn">
           <template v-if="parsedTerminals.length">
             <el-tag v-for="t in parsedTerminals" :key="t.code" style="margin:2px">{{ t.type }}: {{ t.code }}</el-tag>
@@ -66,7 +66,9 @@
         <el-table :data="records" stripe v-loading="recordsLoading">
         <el-table-column label="序号" type="index" width="50" />
         <el-table-column label="终端串码" prop="serialNumber" />
-        <el-table-column label="扫描时间" prop="scannedAt" width="160" class-name="hide-mobile" header-class-name="hide-mobile" />
+        <el-table-column label="扫描时间" width="170" class-name="hide-mobile" header-class-name="hide-mobile">
+          <template #default="{ row }">{{ formatDateTime(row.scannedAt) }}</template>
+        </el-table-column>
         <el-table-column v-if="task.status < 2" label="操作" width="70">
           <template #default="{ row }">
             <el-button size="small" type="danger" @click="removeRecord(row.id)">删除</el-button>
@@ -108,6 +110,7 @@ import { getTaskById, updateTaskStatus, getRecordsByTaskId, deleteRecord } from 
 import type { RecycleTask, TerminalRecord } from '../types'
 import { statusTypeMap } from '../constants'
 import { useIsMobile } from '../composables/useIsMobile'
+import { formatDateTime } from '../utils/datetime'
 
 const route = useRoute()
 const taskId = Number(route.params.id)
@@ -207,7 +210,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.task-detail { max-width: 1000px; margin: 0 auto; }
+.task-detail { max-width: 1000px; margin: 0 auto; overflow-x: hidden; }
 .page-title { font-size: 18px; font-weight: 600; }
 .info-card { margin-top: 20px; }
 .records-card { margin-top: 16px; }

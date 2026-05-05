@@ -1,5 +1,5 @@
 import { ref, onUnmounted } from 'vue'
-import { readBarcodesFromImageData, getZXingModule } from 'zxing-wasm/reader'
+import { readBarcodesFromImageData, getZXingModule, type ReaderOptions } from 'zxing-wasm/reader'
 
 export function useScanner() {
   const isScanning = ref(false)
@@ -19,11 +19,14 @@ export function useScanner() {
 
   async function startScan(callback: (code: string) => void) {
     onDetected = callback
-    isScanning.value = true
+    if (isScanning.value) {
+      stopScan()
+    }
 
     try {
       stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } }
+        audio: false,
+        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
       })
     } catch (e: any) {
       const msg = e.name === 'NotAllowedError' ? '请允许摄像头权限'
@@ -33,6 +36,7 @@ export function useScanner() {
     }
 
     if (!videoRef.value) {
+      stopScan()
       throw new Error('视频元素未就绪')
     }
 
@@ -42,9 +46,17 @@ export function useScanner() {
     if (!canvasRef.value) {
       canvasRef.value = document.createElement('canvas')
     }
+    isScanning.value = true
     const canvas = canvasRef.value
     const ctx = canvas.getContext('2d')!
     let lastScanTime = 0
+    const readerOptions: ReaderOptions = {
+      formats: ['Code128', 'Code39', 'Code93', 'Codabar', 'EAN-13', 'EAN-8', 'UPC-A', 'UPC-E', 'ITF'],
+      tryHarder: true,
+      tryRotate: true,
+      tryInvert: true,
+      maxNumberOfSymbols: 1,
+    }
 
     async function tick() {
       if (!isScanning.value || !videoRef.value) return
@@ -58,16 +70,10 @@ export function useScanner() {
         if (now - lastScanTime > 300) {
           lastScanTime = now
           try {
-            const zxing = await ensureZXing()
+            await ensureZXing()
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-            // @ts-ignore - zxing-wasm type definitions don't match actual API
-            const results = await readBarcodesFromImageData(zxing, imageData, {
-              tryHarder: true,
-              tryRotate: true,
-              tryInvert: true,
-              maxNumberOfSymbols: 1,
-            })
-            if (results.length > 0 && results[0].text) {
+            const results = await readBarcodesFromImageData(imageData, readerOptions)
+            if (results.length > 0 && results[0].isValid && results[0].text) {
               stopScan()
               onDetected?.(results[0].text)
               return

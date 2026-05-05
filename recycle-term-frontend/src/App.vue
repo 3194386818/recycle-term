@@ -43,8 +43,8 @@ const isAdminRoute = computed(() => route.path.startsWith('/admin'))
 .header-right { display: flex; align-items: center; gap: 12px; font-size: 13px; opacity: .9; }
 .header-right .el-button { color: rgba(255,255,255,.85); }
 .header-right .el-button:hover { color: #fff; }
-.body-container { flex: 1; overflow: hidden; }
-.app-main { max-width: 1200px; margin: 0 auto; width: 100%; padding: 20px; overflow-y: auto; overflow-x: hidden; }
+.body-container { flex: 1; overflow: hidden; min-width: 0; }
+.app-main { max-width: 1200px; margin: 0 auto; width: 100%; box-sizing: border-box; padding: 20px; overflow-y: auto; overflow-x: hidden; min-width: 0; }
 @media (max-width: 768px) {
   .app-header { padding: 0 12px; height: 52px; }
   .header-left h1 { font-size: 14px; }

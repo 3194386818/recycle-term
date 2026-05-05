@@ -7,3 +7,19 @@ export const statusTypeMap: Record<number, { label: string; type: string }> = {
   5: { label: '审核失败', type: 'danger' },
   6: { label: '已归档', type: 'info' },
 }
+
+export const statusStepIndexMap: Record<number, number> = {
+  0: 0,
+  1: 1,
+  2: 2,
+  3: 2,
+  4: 3,
+  5: 3,
+  6: 3,
+}
+
+export function getReviewStatusMeta(status: number): { label: string; type: 'success' | 'danger' } {
+  return status === 2
+    ? { label: '已完成', type: 'success' }
+    : { label: '已失败', type: 'danger' }
+}

@@ -15,8 +15,8 @@
         <el-table-column label="用户" prop="userName" width="100" />
         <el-table-column label="状态" width="110" align="center">
           <template #default="{ row }">
-            <el-tag :type="row.status === 2 ? 'success' : 'danger'" size="small">
-              {{ row.status === 2 ? '已完成' : '已失败' }}
+            <el-tag :type="getReviewStatusMeta(row.status).type" size="small">
+              {{ getReviewStatusMeta(row.status).label }}
             </el-tag>
           </template>
         </el-table-column>
@@ -65,7 +65,9 @@
         <el-table :data="detailRecords" stripe size="small" max-height="200">
           <el-table-column label="序号" type="index" width="50" />
           <el-table-column label="终端串码" prop="serialNumber" />
-          <el-table-column label="扫描时间" prop="scannedAt" width="160" />
+          <el-table-column label="扫描时间" width="170">
+            <template #default="{ row }">{{ formatDateTime(row.scannedAt) }}</template>
+          </el-table-column>
         </el-table>
         <el-empty v-if="detailRecords.length === 0" description="暂无扫描记录" :image-size="60" />
       </div>
@@ -75,7 +77,7 @@
     <el-dialog v-model="reviewDialogVisible" title="审核任务" width="450px" destroy-on-close>
       <div v-if="reviewingTask" style="margin-bottom:16px">
         <p><strong>{{ reviewingTask.userName }}</strong> ({{ reviewingTask.productId }})</p>
-        <p>状态：<el-tag :type="reviewingTask.status === 2 ? 'success' : 'danger'" size="small">{{ reviewingTask.status === 2 ? '已完成' : '已失败' }}</el-tag></p>
+        <p>状态：<el-tag :type="getReviewStatusMeta(reviewingTask.status).type" size="small">{{ getReviewStatusMeta(reviewingTask.status).label }}</el-tag></p>
         <p v-if="reviewingTask.failReason">失败原因：<el-tag type="danger" size="small">{{ reviewingTask.failReason }}</el-tag></p>
       </div>
       <el-form>
@@ -93,11 +95,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { getAdminTasks, reviewTask } from '../../api/admin'
 import { getRecordsByTaskId } from '../../api'
 import type { RecycleTask, TerminalRecord } from '../../types'
+import { formatDateTime } from '../../utils/datetime'
+import { getReviewStatusMeta } from '../../constants'
 
 const tasks = ref<RecycleTask[]>([])
 const loading = ref(false)
@@ -124,10 +128,9 @@ function debouncedFetch() {
 async function fetchTasks() {
   loading.value = true
   try {
-    const { data: res2 } = await getAdminTasks({ keyword: keyword.value, status: 2, page: 0, size: 100 })
-    const { data: res3 } = await getAdminTasks({ keyword: keyword.value, status: 3, page: 0, size: 100 })
-    tasks.value = [...res2.data.content, ...res3.data.content].sort((a, b) => b.id - a.id)
-    total.value = tasks.value.length
+    const { data: res } = await getAdminTasks({ keyword: keyword.value, pendingReview: true, page: page.value, size: size.value })
+    tasks.value = res.data.content
+    total.value = res.data.totalElements
   } finally {
     loading.value = false
   }
@@ -162,6 +165,10 @@ async function submitReview(approved: boolean) {
 }
 
 onMounted(fetchTasks)
+
+onUnmounted(() => {
+  if (debounceTimer) clearTimeout(debounceTimer)
+})
 </script>
 
 <style scoped>

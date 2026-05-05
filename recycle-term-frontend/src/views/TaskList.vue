@@ -17,18 +17,18 @@
       </el-input>
     </el-card>
 
-    <!-- Table -->
-    <el-card shadow="never">
+    <!-- Desktop Table -->
+    <el-card v-if="!isMobile" shadow="never">
       <el-table :data="tasks" v-loading="loading" stripe @row-click="goDetail" style="cursor:pointer">
         <el-table-column label="产品号" prop="productId" min-width="120" show-overflow-tooltip />
-        <el-table-column label="用户号码" prop="phoneNumber" min-width="120" show-overflow-tooltip class-name="hide-mobile" header-class-name="hide-mobile" />
+        <el-table-column label="用户号码" prop="phoneNumber" min-width="120" show-overflow-tooltip />
         <el-table-column label="用户名称" prop="userName" min-width="90" />
-        <el-table-column label="用户地址" prop="userAddress" show-overflow-tooltip min-width="160" class-name="hide-mobile" header-class-name="hide-mobile" />
-        <el-table-column label="接入间" prop="accessRoom" width="100" show-overflow-tooltip class-name="hide-mobile" header-class-name="hide-mobile" />
+        <el-table-column label="用户地址" prop="userAddress" show-overflow-tooltip min-width="160" />
+        <el-table-column label="接入间" prop="accessRoom" width="100" show-overflow-tooltip />
         <el-table-column label="应回收" width="70" align="center">
           <template #default="{ row }">{{ row.expectedCount || '-' }}</template>
         </el-table-column>
-        <el-table-column label="已回收" width="70" align="center" class-name="hide-mobile" header-class-name="hide-mobile">
+        <el-table-column label="已回收" width="70" align="center">
           <template #default="{ row }">{{ row.fttrCount || '-' }}</template>
         </el-table-column>
         <el-table-column label="状态" width="90" align="center">
@@ -36,11 +36,10 @@
             <el-tag :type="statusTypeMap[row.status]?.type || 'info'" size="small">{{ statusTypeMap[row.status]?.label || '未知' }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" :width="isMobile ? 130 : 240" fixed="right">
+        <el-table-column label="操作" width="240" fixed="right">
           <template #default="{ row }">
             <el-button-group>
               <el-button size="small" @click.stop="copyProduct(row.productId)">复制</el-button>
-              <el-button size="small" type="primary" @click.stop="goDetail(row)">详情</el-button>
               <el-dropdown v-if="row.status < 2" trigger="click" @command="(cmd: number) => handleStatusChange(row, cmd)" @click.stop>
                 <el-button size="small" type="success">
                   流转<el-icon class="el-icon--right"><ArrowDown /></el-icon>
@@ -74,11 +73,35 @@
         />
       </div>
     </el-card>
+
+    <!-- Mobile Card List -->
+    <div v-else class="mobile-list" v-loading="loading">
+      <el-card v-for="row in tasks" :key="row.id" shadow="never" class="mobile-task-card" @click="goDetail(row)">
+        <div class="mobile-card-head">
+          <div class="mobile-product">{{ row.productId || '-' }}</div>
+          <el-tag :type="statusTypeMap[row.status]?.type || 'info'" size="small">{{ statusTypeMap[row.status]?.label || '未知' }}</el-tag>
+        </div>
+        <div class="mobile-device-line">{{ row.terminals || '-' }}</div>
+        <div class="mobile-card-time">{{ row.userName }} · {{ row.phoneNumber }}</div>
+      </el-card>
+      <el-empty v-if="!loading && tasks.length === 0" description="暂无任务" />
+      <div class="pagination">
+        <el-pagination
+          v-model:current-page="page"
+          :page-size="size"
+          :total="total"
+          :small="true"
+          layout="total, prev, pager, next"
+          @current-change="fetchTasks"
+        />
+      </div>
+    </div>
+
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getTasks, getStats, updateTaskStatus } from '../api'
@@ -195,10 +218,15 @@ onMounted(() => {
   fetchTasks()
   fetchStats()
 })
+
+onUnmounted(() => {
+  if (debounceTimer) clearTimeout(debounceTimer)
+})
 </script>
 
 <style scoped>
 .stats-row { margin-bottom: 12px; }
+.task-list { overflow-x: hidden; min-width: 0; }
 .stats-row .el-col { margin-bottom: 8px; }
 .stat-card { text-align: center; border-radius: 12px; cursor: pointer; transition: all .2s; }
 .stat-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,.12); }
@@ -207,10 +235,17 @@ onMounted(() => {
 .stat-label { font-size: 13px; color: #666; margin-top: 4px; }
 .toolbar-card { margin-bottom: 12px; }
 .pagination { margin-top: 12px; display: flex; justify-content: flex-end; }
+.mobile-list { display: flex; flex-direction: column; gap: 10px; }
+.mobile-task-card { cursor: pointer; }
+.mobile-card-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.mobile-product { font-size: 15px; font-weight: 700; color: #1677ff; }
+.mobile-device-line { margin-top: 8px; color: #606266; font-size: 13px; line-height: 1.45; word-break: break-all; }
+.mobile-card-time { margin-top: 8px; color: #909399; font-size: 12px; }
 
 @media (max-width: 768px) {
+  .stats-row { margin-left: 0 !important; margin-right: 0 !important; }
+  .stats-row :deep(.el-col) { padding-left: 4px !important; padding-right: 4px !important; }
   .stat-num { font-size: 24px; }
   .stat-label { font-size: 12px; }
-  :deep(.hide-mobile) { display: none !important; }
 }
 </style>

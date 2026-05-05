@@ -7,7 +7,7 @@
     <el-card shadow="never" style="margin-top:16px">
       <el-descriptions :column="descColumn" border>
         <el-descriptions-item label="产品号">{{ item.productId }}</el-descriptions-item>
-        <el-descriptions-item label="入库时间">{{ item.receivedAt }}</el-descriptions-item>
+        <el-descriptions-item label="入库时间">{{ formatDateTime(item.receivedAt) }}</el-descriptions-item>
         <el-descriptions-item label="客户名字">{{ item.customerName || '-' }}</el-descriptions-item>
         <el-descriptions-item label="联系方式">{{ item.phone || '-' }}</el-descriptions-item>
         <el-descriptions-item label="SN号">{{ item.snNumber || '-' }}</el-descriptions-item>
@@ -23,6 +23,14 @@
         <el-table-column label="序号" type="index" width="60" />
         <el-table-column label="设备类型" prop="type" width="150" />
         <el-table-column label="串码" prop="sn" show-overflow-tooltip />
+        <el-table-column label="状态" width="90" align="center">
+          <template #default="{ row }">
+            <el-tag :type="row.outbound ? 'info' : 'success'">{{ row.outbound ? '已出库' : '在库' }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="出库时间" min-width="170" show-overflow-tooltip>
+          <template #default="{ row }">{{ formatDateTime(row.outboundAt) }}</template>
+        </el-table-column>
       </el-table>
       <el-empty v-if="devices.length === 0" description="暂无设备" />
     </el-card>
@@ -35,6 +43,7 @@ import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getWarehouseItem } from '../../api/warehouse'
 import type { WarehouseItem, DeviceInfo } from '../../api/warehouse'
+import { formatDateTime } from '../../utils/datetime'
 
 const route = useRoute()
 const itemId = Number(route.params.id)

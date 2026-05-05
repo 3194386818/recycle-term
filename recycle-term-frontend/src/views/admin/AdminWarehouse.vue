@@ -22,7 +22,9 @@
           </template>
         </el-table-column>
         <el-table-column label="客户" prop="customerName" width="90" />
-        <el-table-column label="入库时间" prop="receivedAt" width="160" />
+        <el-table-column label="入库时间" width="170">
+          <template #default="{ row }">{{ formatDateTime(row.receivedAt) }}</template>
+        </el-table-column>
         <el-table-column label="操作" width="140" fixed="right">
           <template #default="{ row }">
             <el-button size="small" @click="showEdit(row)">编辑</el-button>
@@ -76,11 +78,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Delete, Camera } from '@element-plus/icons-vue'
 import { useScanner } from '../../composables/useScanner'
 import type { WarehouseItem, DeviceInfo } from '../../api/warehouse'
+import { formatDateTime } from '../../utils/datetime'
 
 interface DeviceType { id: number; name: string }
 
@@ -100,7 +103,9 @@ const submitting = ref(false)
 
 const scanningIndex = ref<number | null>(null)
 const scanError = ref('')
-const { videoRef, startScan, stopScan, isScanning } = useScanner()
+const scanner = useScanner()
+const { videoRef, startScan, stopScan } = scanner
+void videoRef
 
 let timer: ReturnType<typeof setTimeout> | null = null
 function debouncedFetch() {
@@ -113,7 +118,7 @@ function parseDevices(json: string): DeviceInfo[] {
 }
 
 async function fetchDeviceTypes() {
-  const res = await fetch('/api/device-types')
+  const res = await fetch('/api/device-types?sortBy=id&sortOrder=asc')
   const data = await res.json()
   deviceTypes.value = data.data
 }
@@ -158,6 +163,7 @@ async function toggleScan(index: number) {
   scanningIndex.value = index
   scanError.value = ''
   try {
+    await nextTick()
     await startScan((code: string) => {
       formDevices.value[index].sn = code
       scanningIndex.value = null
