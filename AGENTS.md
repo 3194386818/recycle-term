@@ -82,7 +82,7 @@ recycle-term/
 - API responses: `const { data: res } = await getTasks()` (wrapper is `ApiResult<T>`).
 - Naming: PascalCase files, camelCase functions/refs, kebab-case CSS.
 - Debounce search: `setTimeout`/`clearTimeout` pattern (see `TaskList.vue`).
-- Mobile: detect via `window.innerWidth <= 768`, use `class-name="hide-mobile"` for hidden columns.
+- Mobile: prioritize dedicated mobile rendering (card list + bottom drawer). Avoid relying only on `hide-mobile` in Element Plus tables.
 - Error handling: `try { await api() } catch (e: any) { ElMessage.error(e.response?.data?.message || 'xxx') }`.
 - **DON'T**: use `window.location.hash` for navigation — use `router.push()` instead.
 
@@ -126,24 +126,20 @@ Status integer → UI label mapping (define in a shared constant, NOT duplicated
 ## Known Issues / Optimization TODO
 
 ### High Priority
-- **N+1 queries**: `TerminalRecordService.scan()`, `AdminService.batchCreateTasks()`, `StatsService` daily loop — batch with `saveAll()` / aggregation queries.
-- **Admin delete** (`AdminService.deleteTask`) doesn't cascade-delete `terminal_record` rows.
-- **Excel import** uses `XSSFWorkbook` only (`.xlsx`). Use `WorkbookFactory.create()` for `.xls` support.
+- **Batch create optimization**: `AdminService.batchCreateTasks()` can still be optimized further for very large imports (chunk flush).
 - **Missing DB indexes**: `recycle_task.status`, `recycle_task.completed`, `recycle_task.completed_at`, `terminal_record.scanned_at`, unique `(task_id, serial_number)`.
 - **`open-in-view: true`** anti-pattern — set to `false` and add `@Transactional` to all read services.
 
 ### Medium Priority
-- **Duplicate `statusTypeMap`** in 3+ components — extract to `src/constants/index.ts`.
-- **Memory leak**: `window resize` listeners not removed in `TaskList.vue`/`TaskDetail.vue` — use `onUnmounted(() => window.removeEventListener(...))`.
+- **Status flow constants**: continue consolidating flow/step metadata in `src/constants/index.ts` (avoid page-local status logic).
 - **Missing error handling**: `fetchStats`, `removeRecord`, `handleDelete` lack try/catch.
 - **`admin.ts:22`** uses `window.location.hash` with `createWebHistory` router — use `router.push('/admin/login')`.
 - **`schema.sql`** is stale — missing `fail_reason`, `review_remark`, `reviewer_id`, status range up to 6.
-- **ReviewList fetches status 2+3 separately** — add `pendingReview` param to admin API or merge requests.
+- **Scanner path duplication**: `ScanPage.vue` and `useScanner.ts` still contain separate scanning flows; unify to one implementation.
 
 ### Low Priority
 - No Spring Boot Actuator (`/health` endpoint).
-- HTML `<html lang="en">` should be `zh-CN`.
-- No favicon. Page title is "recycle-term-frontend".
+- Frontend mobile list/card UX can be further unified across review/archive/task screens.
 - `codeable-taskRepository-searchByKeyword` and `findByPhoneNumberLikeOr...` are unused dead code.
 - `OperationLog` table has no retention/cleanup mechanism.
 
