@@ -101,6 +101,7 @@ jobs:
             
             # Deploy frontend
             echo '${{ secrets.ROOT_PASSWORD }}' | su -c "rm -rf /var/www/recycle-term/*"
+            echo '${{ secrets.ROOT_PASSWORD }}' | su -c "rm -rf /tmp/fe-deploy"
             echo '${{ secrets.ROOT_PASSWORD }}' | su -c "mkdir -p /tmp/fe-deploy"
             echo '${{ secrets.ROOT_PASSWORD }}' | su -c "cp -r /tmp/fe-dist/* /tmp/fe-deploy/"
             echo '${{ secrets.ROOT_PASSWORD }}' | su -c "cp -r /tmp/fe-deploy/* /var/www/recycle-term/"
@@ -110,7 +111,7 @@ jobs:
             echo '${{ secrets.ROOT_PASSWORD }}' | su -c "systemctl restart recycle-term"
             
             # Cleanup
-            rm -rf /tmp/recycle-term-backend.jar /tmp/fe-dist /tmp/fe-deploy
+            echo '${{ secrets.ROOT_PASSWORD }}' | su -c "rm -rf /tmp/recycle-term-backend.jar /tmp/fe-dist /tmp/fe-deploy"
             
             # Wait and verify
             sleep 5
