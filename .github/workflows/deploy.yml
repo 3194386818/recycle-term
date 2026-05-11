@@ -1,8 +1,7 @@
 name: Build & Deploy
 
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 jobs:
   build-and-deploy:
@@ -69,6 +68,34 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           password: ${{ secrets.SERVER_PASSWORD }}
           script: |
+            set -e
+
+            # Backup database before deployment
+            BACKUP_DIR="/opt/recycle-term/backups"
+            TS=$(date +%Y%m%d_%H%M%S)
+            BACKUP_FILE="$BACKUP_DIR/recycle_term_$TS.sql"
+            echo '${{ secrets.ROOT_PASSWORD }}' | su -c "mkdir -p $BACKUP_DIR"
+
+            if echo '${{ secrets.ROOT_PASSWORD }}' | su -c "mysqldump recycle_term > $BACKUP_FILE"; then
+              echo "DB backup created: $BACKUP_FILE"
+            else
+              APP_CFG="/opt/recycle-term/application-prod.yml"
+              if [ -f "$APP_CFG" ]; then
+                DB_USER=$(echo '${{ secrets.ROOT_PASSWORD }}' | su -c "grep -A6 '^spring:' $APP_CFG | grep 'username:' | head -1 | sed 's/.*username:[[:space:]]*//'" || true)
+                DB_PASS=$(echo '${{ secrets.ROOT_PASSWORD }}' | su -c "grep -A6 '^spring:' $APP_CFG | grep 'password:' | head -1 | sed 's/.*password:[[:space:]]*//'" || true)
+                if [ -n "$DB_USER" ] && [ -n "$DB_PASS" ]; then
+                  echo '${{ secrets.ROOT_PASSWORD }}' | su -c "mysqldump -u'$DB_USER' -p'$DB_PASS' recycle_term > $BACKUP_FILE"
+                  echo "DB backup created: $BACKUP_FILE"
+                else
+                  echo "ERROR: could not resolve DB credentials for backup"
+                  exit 1
+                fi
+              else
+                echo "ERROR: backup failed and application config not found"
+                exit 1
+              fi
+            fi
+
             # Install JAR
             echo '${{ secrets.ROOT_PASSWORD }}' | su -c "install -m 755 /tmp/recycle-term-backend.jar /opt/recycle-term/recycle-term-backend.jar"
             
