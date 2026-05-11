@@ -91,7 +91,7 @@ function showContent(row: WarehouseChangeRequest) {
   currentContent.value = row.requestContent || '(无内容)'
   try {
     currentParsed.value = row.requestContent ? JSON.parse(row.requestContent) : null
-    parsedDevices.value = currentParsed.value?.devices ? JSON.parse(currentParsed.value.devices) : []
+    parsedDevices.value = Array.isArray(currentParsed.value?.devices) ? currentParsed.value.devices : (currentParsed.value?.devices ? JSON.parse(currentParsed.value.devices) : [])
   } catch {
     currentParsed.value = null
     parsedDevices.value = []

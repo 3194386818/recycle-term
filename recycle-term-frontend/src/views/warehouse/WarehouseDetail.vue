@@ -23,6 +23,7 @@
         <el-table-column label="序号" type="index" width="60" />
         <el-table-column label="设备类型" prop="type" width="150" />
         <el-table-column label="串码" prop="sn" show-overflow-tooltip />
+        <el-table-column label="所属仓库" prop="warehouseName" width="120" />
         <el-table-column label="状态" width="90" align="center">
           <template #default="{ row }">
             <el-tag :type="row.outbound ? 'info' : 'success'">{{ row.outbound ? '已出库' : '在库' }}</el-tag>
@@ -31,9 +32,21 @@
         <el-table-column label="出库时间" min-width="170" show-overflow-tooltip>
           <template #default="{ row }">{{ formatDateTime(row.outboundAt) }}</template>
         </el-table-column>
+        <el-table-column label="轨迹" width="90">
+          <template #default="{ row }"><el-button size="small" @click="showMovements(row)">查看</el-button></template>
+        </el-table-column>
       </el-table>
       <el-empty v-if="devices.length === 0" description="暂无设备" />
     </el-card>
+
+    <el-dialog v-model="movementVisible" title="设备轨迹" width="560px">
+      <el-timeline>
+        <el-timeline-item v-for="m in movements" :key="m.id" :timestamp="formatDateTime(m.createdAt)">
+          {{ movementLabel(m) }}
+        </el-timeline-item>
+      </el-timeline>
+      <el-empty v-if="movements.length === 0" description="暂无轨迹" />
+    </el-dialog>
   </div>
 </template>
 
@@ -41,8 +54,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { getWarehouseItem } from '../../api/warehouse'
-import type { WarehouseItem, DeviceInfo } from '../../api/warehouse'
+import { getWarehouseItem, getWarehouseDeviceMovements } from '../../api/warehouse'
+import type { WarehouseItem, DeviceInfo, WarehouseDeviceMovement } from '../../api/warehouse'
 import { formatDateTime } from '../../utils/datetime'
 
 const route = useRoute()
@@ -52,10 +65,10 @@ window.addEventListener('resize', () => { isMobile.value = window.innerWidth <= 
 const descColumn = computed(() => isMobile.value ? 1 : 2)
 
 const item = ref<WarehouseItem | null>(null)
+const movementVisible = ref(false)
+const movements = ref<WarehouseDeviceMovement[]>([])
 
-const devices = computed<DeviceInfo[]>(() => {
-  try { return JSON.parse(item.value?.devices || '[]') } catch { return [] }
-})
+const devices = computed<DeviceInfo[]>(() => item.value?.devices || [])
 
 async function fetchItem() {
   try {
@@ -64,6 +77,20 @@ async function fetchItem() {
   } catch (e: any) {
     ElMessage.error(e.response?.data?.message || '加载失败')
   }
+}
+
+async function showMovements(device: DeviceInfo) {
+  if (!device.id) return
+  const { data: res } = await getWarehouseDeviceMovements(device.id)
+  movements.value = res.data
+  movementVisible.value = true
+}
+
+function movementLabel(m: WarehouseDeviceMovement) {
+  if (m.movementType === 'INBOUND') return `入库到 ${m.toWarehouseName || '-'}`
+  if (m.movementType === 'TRANSFER') return `从 ${m.fromWarehouseName || '-'} 转到 ${m.toWarehouseName || '-'}`
+  if (m.movementType === 'OUTBOUND') return `从 ${m.fromWarehouseName || '-'} 出库`
+  return m.movementType
 }
 
 onMounted(fetchItem)

@@ -10,7 +10,11 @@
           <el-input v-model="keyword" class="search-input" placeholder="搜索产品号、串码、客户名..." clearable @input="debouncedFetch">
             <template #prefix><el-icon><Search /></el-icon></template>
           </el-input>
+          <el-select v-model="selectedWarehouseId" class="warehouse-filter" placeholder="全部启用仓库" clearable @change="fetchItems">
+            <el-option v-for="w in warehouses" :key="w.id" :label="w.name" :value="w.id" />
+          </el-select>
           <div style="display:flex;gap:8px">
+            <el-button type="info" @click="openScanQueryDialog">扫码查询</el-button>
             <el-button type="success" @click="quickDialogVisible = true">快速入库</el-button>
             <el-button type="primary" @click="showAdd">新增入库</el-button>
           </div>
@@ -24,7 +28,7 @@
         </el-table-column>
         <el-table-column label="设备列表" min-width="220" show-overflow-tooltip>
           <template #default="{ row }">
-            <el-tag v-for="d in getDeviceList(row.id).slice(0, 3)" :key="d.sn" size="small" style="margin:1px">{{ d.type }}: {{ d.sn }}</el-tag>
+            <el-tag v-for="d in getDeviceList(row.id).slice(0, 3)" :key="d.id || d.sn" size="small" style="margin:1px">{{ d.type }}: {{ d.sn }} · {{ d.warehouseName || '-' }}</el-tag>
             <span v-if="getDeviceList(row.id).length > 3" style="color:#999">+{{ getDeviceList(row.id).length - 3 }}</span>
           </template>
         </el-table-column>
@@ -54,6 +58,7 @@
     <el-dialog v-model="dialogVisible" :title="editId ? '申请修改入库信息' : '新增入库'" width="700px" destroy-on-close>
       <el-form :model="form" label-width="90px">
         <el-row :gutter="12">
+          <el-col :span="12"><el-form-item label="所属仓库" required><el-select v-model="formWarehouseId" style="width:100%"><el-option v-for="w in warehouses" :key="w.id" :label="w.name" :value="w.id" /></el-select></el-form-item></el-col>
           <el-col :span="12"><el-form-item label="产品号" required><el-input v-model="form.productId" placeholder="020开头" /></el-form-item></el-col>
           <el-col :span="12"><el-form-item label="客户名字"><el-input v-model="form.customerName" /></el-form-item></el-col>
           <el-col :span="12"><el-form-item label="联系方式"><el-input v-model="form.phone" /></el-form-item></el-col>
@@ -101,6 +106,7 @@
       <div v-if="quickStep === 1" style="margin-top:18px">
         <el-form :model="quickForm" label-width="90px">
           <el-row :gutter="12">
+            <el-col :span="12"><el-form-item label="所属仓库"><el-select v-model="quickWarehouseId" style="width:100%"><el-option v-for="w in warehouses" :key="w.id" :label="w.name" :value="w.id" /></el-select></el-form-item></el-col>
             <el-col :span="12"><el-form-item label="产品号"><el-input v-model="quickForm.productId" /></el-form-item></el-col>
             <el-col :span="12"><el-form-item label="客户名字"><el-input v-model="quickForm.customerName" /></el-form-item></el-col>
             <el-col :span="12"><el-form-item label="联系方式"><el-input v-model="quickForm.phone" /></el-form-item></el-col>
@@ -162,6 +168,17 @@
       </template>
     </el-dialog>
 
+    <el-dialog v-model="scanQueryVisible" title="扫码查询订单" width="520px" destroy-on-close @close="closeScanQueryDialog">
+      <div class="scanner-preview">
+        <video ref="videoRef" class="scanner-video" autoplay playsinline muted></video>
+        <div v-if="scanQueryError" class="scan-error">{{ scanQueryError }}</div>
+      </div>
+      <div class="scan-query-tip">扫描设备串码后将自动查询对应订单</div>
+      <template #footer>
+        <el-button @click="closeScanQueryDialog">关闭</el-button>
+      </template>
+    </el-dialog>
+
     <el-drawer
       v-model="mobileActionVisible"
       direction="btt"
@@ -191,11 +208,13 @@ import { ElMessage } from 'element-plus'
 import { Delete, Camera, Search } from '@element-plus/icons-vue'
 import {
   searchWarehouse,
+  listWarehouses,
   createWarehouseItem,
   outboundWarehouseItem,
   createWarehouseChangeRequest,
   type WarehouseItem,
   type DeviceInfo,
+  type Warehouse,
 } from '../../api/warehouse'
 import { useScanner } from '../../composables/useScanner'
 import { useIsMobile } from '../../composables/useIsMobile'
@@ -206,6 +225,10 @@ interface DeviceType { id: number; name: string }
 const router = useRouter()
 const isMobile = useIsMobile()
 const items = ref<WarehouseItem[]>([])
+const warehouses = ref<Warehouse[]>([])
+const selectedWarehouseId = ref<number | undefined>()
+const formWarehouseId = ref<number | undefined>()
+const quickWarehouseId = ref<number | undefined>()
 const loading = ref(false)
 const page = ref(0)
 const size = ref(20)
@@ -232,6 +255,8 @@ const selectedOutboundSn = ref('')
 const outboundCandidates = ref<DeviceInfo[]>([])
 const mobileActionVisible = ref(false)
 const mobileActionRow = ref<WarehouseItem | null>(null)
+const scanQueryVisible = ref(false)
+const scanQueryError = ref('')
 
 const scanningIndex = ref<number | null>(null)
 const quickScanningIndex = ref<number | null>(null)
@@ -246,8 +271,13 @@ function debouncedFetch() {
   timer = setTimeout(() => { page.value = 0; fetchItems() }, 300)
 }
 
-function parseDevices(json: string): DeviceInfo[] {
-  try { return JSON.parse(json || '[]') } catch { return [] }
+function parseDevices(devices: DeviceInfo[] | string | null | undefined): DeviceInfo[] {
+  if (Array.isArray(devices)) return devices
+  try { return JSON.parse(devices || '[]') } catch { return [] }
+}
+
+function defaultWarehouseId() {
+  return warehouses.value.find(w => w.defaultWarehouse)?.id || warehouses.value[0]?.id
 }
 
 const devicesById = computed(() => {
@@ -265,11 +295,53 @@ function getDeviceList(itemId: number): DeviceInfo[] {
 async function fetchItems() {
   loading.value = true
   try {
-    const { data: res } = await searchWarehouse(keyword.value, page.value, size.value)
+    const { data: res } = await searchWarehouse(keyword.value, page.value, size.value, selectedWarehouseId.value)
     items.value = res.data.content
     total.value = res.data.totalElements
     if (items.value.length === 0 && page.value > 0) { page.value--; fetchItems(); return }
   } finally { loading.value = false }
+}
+
+async function queryBySerialCode(serialCode: string) {
+  loading.value = true
+  try {
+    const { data: res } = await searchWarehouse(serialCode, 0, size.value, selectedWarehouseId.value)
+    items.value = res.data.content
+    total.value = res.data.totalElements
+    page.value = 0
+    keyword.value = serialCode
+
+    if (res.data.totalElements === 0) {
+      ElMessage.warning(`未找到串码 ${serialCode} 对应订单`)
+      return
+    }
+    ElMessage.success(`找到 ${res.data.totalElements} 条匹配订单`)
+    if (res.data.totalElements === 1 && res.data.content.length === 1) {
+      goDetail(res.data.content[0])
+    }
+  } finally {
+    loading.value = false
+  }
+}
+
+async function openScanQueryDialog() {
+  scanQueryVisible.value = true
+  scanQueryError.value = ''
+  try {
+    await nextTick()
+    await startScan((code: string) => {
+      closeScanQueryDialog()
+      queryBySerialCode(code)
+    })
+  } catch (e: any) {
+    scanQueryError.value = e.message || '扫码失败'
+  }
+}
+
+function closeScanQueryDialog() {
+  stopScan()
+  scanQueryVisible.value = false
+  scanQueryError.value = ''
 }
 
 function handleRowClick(row: WarehouseItem) {
@@ -289,6 +361,7 @@ function goDetail(row: WarehouseItem) {
 function showAdd() {
   editId.value = null
   form.value = { productId: '', customerName: '', phone: '', address: '', splitter: '', snNumber: '', accessRoom: '' }
+  formWarehouseId.value = defaultWarehouseId()
   formDevices.value = [{ type: '', sn: '' }]
   scanningIndex.value = null
   dialogVisible.value = true
@@ -298,6 +371,7 @@ function showEditRequest(row: WarehouseItem) {
   mobileActionVisible.value = false
   editId.value = row.id
   form.value = { ...row }
+  formWarehouseId.value = row.devices?.find(d => !d.outbound)?.warehouseId || row.devices?.[0]?.warehouseId || defaultWarehouseId()
   formDevices.value = parseDevices(row.devices)
   if (formDevices.value.length === 0) formDevices.value = [{ type: '', sn: '' }]
   scanningIndex.value = null
@@ -367,12 +441,20 @@ async function fetchDeviceTypes() {
   deviceTypes.value = data.data
 }
 
+async function fetchWarehouses() {
+  const { data: res } = await listWarehouses(false)
+  warehouses.value = res.data
+  selectedWarehouseId.value = undefined
+  formWarehouseId.value = defaultWarehouseId()
+  quickWarehouseId.value = defaultWarehouseId()
+}
+
 async function handleSubmit() {
   if (!form.value.productId) { ElMessage.warning('请输入产品号'); return }
   const validDevices = formDevices.value.filter(d => d.sn.trim())
   submitting.value = true
   try {
-    const payload = { ...form.value, devices: JSON.stringify(validDevices) }
+    const payload = { ...form.value, devices: validDevices.map(d => ({ ...d, warehouseId: d.warehouseId || formWarehouseId.value })) }
     if (editId.value) {
       await createWarehouseChangeRequest({
         warehouseItemId: editId.value,
@@ -449,7 +531,8 @@ function nextQuickStep() {
   if (quickStep.value === 0) {
     if (!quickText.value.trim()) { ElMessage.warning('请先粘贴文本'); return }
     parseQuickText()
-    quickDevices.value = [{ type: '', sn: quickForm.value.snNumber || '' }]
+    quickWarehouseId.value = defaultWarehouseId()
+    quickDevices.value = [{ type: '', sn: '' }]
   }
   if (quickStep.value === 1 && !quickForm.value.productId) {
     ElMessage.warning('产品号不能为空')
@@ -462,7 +545,7 @@ async function submitQuickInbound() {
   quickSubmitting.value = true
   try {
     const validDevices = quickDevices.value.filter(d => d.sn.trim())
-    await createWarehouseItem({ ...quickForm.value, devices: JSON.stringify(validDevices) })
+    await createWarehouseItem({ ...quickForm.value, devices: validDevices.map(d => ({ ...d, warehouseId: d.warehouseId || quickWarehouseId.value })) })
     ElMessage.success('快速入库成功')
     quickDialogVisible.value = false
     fetchItems()
@@ -489,6 +572,7 @@ const quickDialogWidth = computed(() => isMobile.value ? '96%' : '760px')
 onMounted(() => {
   fetchItems()
   fetchDeviceTypes()
+  fetchWarehouses()
 })
 
 onUnmounted(() => {
@@ -498,7 +582,8 @@ onUnmounted(() => {
 
 <style scoped>
 .page-title { font-weight: 600; }
-.card-header { display: flex; justify-content: space-between; align-items: center; }
+.card-header { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.warehouse-filter { width: 180px; }
 .pagination { margin-top: 16px; display: flex; justify-content: flex-end; }
 .scanner-preview { margin-top: 12px; border-radius: 8px; overflow: hidden; border: 1px solid #eee; position: relative; }
 .scanner-video { width: 100%; max-height: 240px; object-fit: cover; }
@@ -506,6 +591,7 @@ onUnmounted(() => {
 @media (max-width: 768px) {
   .card-header { flex-direction: column; align-items: stretch; gap: 10px; }
   .search-input { width: 100% !important; }
+  .warehouse-filter { width: 100% !important; }
   .pagination { justify-content: center; }
   :deep(.hide-mobile) { display: none !important; }
 }

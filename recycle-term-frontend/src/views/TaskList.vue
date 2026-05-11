@@ -1,5 +1,9 @@
 <template>
   <div class="task-list">
+    <el-page-header class="page-header" @back="router.push('/')">
+      <template #content><span class="page-title">回收任务</span></template>
+    </el-page-header>
+
     <!-- Stats cards: clickable filters -->
     <el-row :gutter="12" class="stats-row">
       <el-col :xs="12" :sm="6" v-for="item in statCards" :key="item.key">
@@ -225,6 +229,8 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+.page-header { margin-bottom: 16px; }
+.page-title { font-weight: 600; }
 .stats-row { margin-bottom: 12px; }
 .task-list { overflow-x: hidden; min-width: 0; }
 .stats-row .el-col { margin-bottom: 8px; }

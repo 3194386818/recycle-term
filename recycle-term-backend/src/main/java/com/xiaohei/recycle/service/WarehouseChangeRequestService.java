@@ -3,7 +3,8 @@ package com.xiaohei.recycle.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.xiaohei.recycle.dto.WarehouseChangeRequestCreateDto;
 import com.xiaohei.recycle.entity.WarehouseChangeRequest;
-import com.xiaohei.recycle.entity.WarehouseItem;
+import com.xiaohei.recycle.dto.WarehouseItemDto;
+import com.xiaohei.recycle.dto.WarehouseDeviceDto;
 import com.xiaohei.recycle.repository.WarehouseChangeRequestRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -75,15 +76,18 @@ public class WarehouseChangeRequestService {
         if ("UPDATE".equals(type)) {
             try {
                 Map<String, Object> map = objectMapper.readValue(req.getRequestContent(), Map.class);
-                WarehouseItem item = new WarehouseItem();
+                WarehouseItemDto item = new WarehouseItemDto();
                 item.setProductId((String) map.get("productId"));
-                item.setDevices((String) map.get("devices"));
                 item.setCustomerName((String) map.get("customerName"));
                 item.setPhone((String) map.get("phone"));
                 item.setSplitter((String) map.get("splitter"));
                 item.setAddress((String) map.get("address"));
                 item.setSnNumber((String) map.get("snNumber"));
                 item.setAccessRoom((String) map.get("accessRoom"));
+                Object devices = map.get("devices");
+                if (devices != null) {
+                    item.setDevices(objectMapper.convertValue(devices, new com.fasterxml.jackson.core.type.TypeReference<java.util.List<WarehouseDeviceDto>>() {}));
+                }
                 warehouseService.update(req.getWarehouseItemId(), item);
             } catch (Exception e) {
                 throw new RuntimeException("申请内容解析失败");
