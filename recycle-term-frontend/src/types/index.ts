@@ -67,3 +67,65 @@ export interface OperationLog {
   ip: string
   createdAt: string
 }
+
+export interface WorkOrder {
+  id: number
+  workOrderNo: string
+  productId: string
+  userName: string
+  contactPhone: string
+  workOrderType: string
+  address: string
+  cvlan: string
+  svlan: string
+  splitter: string
+  splitterPort: string
+  onuSn: string
+  status: string
+  failureReason: string
+  remark: string
+  appointedAt: string | null
+  fulfilledAt: string | null
+  completedAt: string | null
+  transferredAt: string | null
+  failedAt: string | null
+  sourceType: string | null
+  sourceId: string | null
+  rawSource: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface WorkOrderOption {
+  id: number
+  category: string
+  value: string
+  label: string
+  sortOrder: number
+  enabled: boolean
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface WorkOrderOptions {
+  types: WorkOrderOption[]
+  failureReasons: WorkOrderOption[]
+  statuses: WorkOrderOption[]
+}
+
+export interface WorkOrderQuickParseDto {
+  text: string
+}
+
+export interface WorkOrderLegacyImportPreview {
+  total: number
+  importable: number
+  existing: number
+  samples: Partial<WorkOrder>[]
+}
+
+export interface WorkOrderLegacyImportResult {
+  total: number
+  created: number
+  skipped: number
+}

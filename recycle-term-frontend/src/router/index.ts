@@ -32,6 +32,21 @@ const routes = [
     component: () => import('../views/warehouse/WarehouseDetail.vue'),
   },
   {
+    path: '/work-orders',
+    name: 'WorkOrderList',
+    component: () => import('../views/work-order/WorkOrderList.vue'),
+  },
+  {
+    path: '/work-orders/quick',
+    name: 'WorkOrderQuickEntry',
+    component: () => import('../views/work-order/WorkOrderQuickEntry.vue'),
+  },
+  {
+    path: '/work-orders/:id',
+    name: 'WorkOrderDetail',
+    component: () => import('../views/work-order/WorkOrderDetail.vue'),
+  },
+  {
     path: '/admin/login',
     name: 'AdminLogin',
     component: () => import('../views/admin/AdminLogin.vue'),
@@ -57,6 +72,9 @@ const routes = [
       { path: 'warehouse', name: 'AdminWarehouse', component: () => import('../views/admin/AdminWarehouse.vue') },
       { path: 'warehouse-requests', name: 'AdminWarehouseRequests', component: () => import('../views/admin/AdminWarehouseRequests.vue') },
       { path: 'device-types', name: 'AdminDeviceType', component: () => import('../views/admin/AdminDeviceType.vue') },
+      { path: 'work-orders', name: 'AdminWorkOrders', component: () => import('../views/admin/AdminWorkOrders.vue') },
+      { path: 'work-order-import', name: 'WorkOrderLegacyImport', component: () => import('../views/admin/WorkOrderLegacyImport.vue') },
+      { path: 'work-order-options', name: 'WorkOrderOptions', component: () => import('../views/admin/WorkOrderOptions.vue') },
       { path: 'logs', name: 'OperationLogs', component: () => import('../views/admin/OperationLogs.vue') },
     ],
   },

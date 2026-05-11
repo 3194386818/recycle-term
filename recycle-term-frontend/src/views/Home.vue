@@ -15,6 +15,11 @@
         <h3>仓库管理</h3>
         <p>查询仓库设备信息，入库出库管理</p>
       </div>
+      <div class="module-card" @click="$router.push('/work-orders')">
+        <el-icon :size="40" color="#faad14"><Document /></el-icon>
+        <h3>工单系统</h3>
+        <p>查看、处理工单，快捷录入工单</p>
+      </div>
     </div>
   </div>
 </template>

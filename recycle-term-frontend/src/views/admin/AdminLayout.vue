@@ -22,6 +22,9 @@
           <el-menu-item index="/admin/warehouse"><el-icon><Box /></el-icon><template #title>仓库管理</template></el-menu-item>
           <el-menu-item index="/admin/warehouse-requests"><el-icon><Checked /></el-icon><template #title>仓库申请审核</template></el-menu-item>
           <el-menu-item index="/admin/device-types"><el-icon><Setting /></el-icon><template #title>设备类型</template></el-menu-item>
+          <el-menu-item index="/admin/work-orders"><el-icon><Document /></el-icon><template #title>工单管理</template></el-menu-item>
+          <el-menu-item index="/admin/work-order-import"><el-icon><Upload /></el-icon><template #title>工单导入</template></el-menu-item>
+          <el-menu-item index="/admin/work-order-options"><el-icon><Setting /></el-icon><template #title>工单选项</template></el-menu-item>
           <el-menu-item index="/admin/logs"><el-icon><Document /></el-icon><template #title>操作日志</template></el-menu-item>
         </el-menu>
         <div class="collapse-btn" @click="isCollapse = !isCollapse">

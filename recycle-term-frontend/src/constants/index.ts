@@ -23,3 +23,21 @@ export function getReviewStatusMeta(status: number): { label: string; type: 'suc
     ? { label: '已完成', type: 'success' }
     : { label: '已失败', type: 'danger' }
 }
+
+export const workOrderStatusMap: Record<string, { label: string; type: string }> = {
+  'ACCEPTED': { label: '接单', type: 'info' },
+  'APPOINTED': { label: '预约', type: 'primary' },
+  'FULFILLING': { label: '履约', type: 'warning' },
+  'COMPLETED': { label: '完成', type: 'success' },
+  'TRANSFERRED': { label: '调走', type: 'info' },
+  'FAILED': { label: '失败', type: 'danger' },
+}
+
+export const workOrderStatusStepMap: Record<string, number> = {
+  'ACCEPTED': 0,
+  'APPOINTED': 1,
+  'FULFILLING': 2,
+  'COMPLETED': 3,
+  'TRANSFERRED': 3,
+  'FAILED': 3,
+}
